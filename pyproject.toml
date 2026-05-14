@@ -1,0 +1,105 @@
+[project]
+name = "taotao-llm"
+version = "0.1.0"
+description = "From-scratch LLM training, dual-track (nano + industrial) — macOS friendly"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "taotao", email = "noreply@example.com" }]
+
+dependencies = [
+    # core training
+    "torch>=2.4.0",
+    "numpy>=1.26",
+
+    # HF stack (industrial track)
+    "transformers>=4.45",
+    "datasets>=3.0",
+    "tokenizers>=0.20",
+    "accelerate>=1.0",
+    "peft>=0.13",
+    "trl>=0.11",
+    "safetensors>=0.4",
+
+    # logging / config
+    "wandb>=0.18",
+    "pydantic>=2.8",
+    "pyyaml>=6.0",
+    "rich>=13.7",
+    "python-dotenv>=1.0",
+
+    # eval (lightweight bits; lm-eval-harness installed separately on demand)
+    "evaluate>=0.4",
+    "scikit-learn>=1.5",
+
+    # serving (added in phase 9 backend)
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+    "sse-starlette>=2.1",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=5.0",
+    "ruff>=0.7",
+    "mypy>=1.13",
+    "ipykernel>=6.29",
+    "jupyterlab>=4.2",
+    "matplotlib>=3.9",
+    "pip-audit>=2.7",
+]
+# install per-phase as needed:
+# uv pip install bitsandbytes      (phase 5 · QLoRA · linux+CUDA only)
+# uv pip install flash-attn        (phase 8 · CUDA only)
+# uv pip install unsloth           (phase 5 · CUDA only)
+# uv pip install lm-eval           (phase 7)
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["nano", "industrial"]
+
+# ────────────────────────────────────────────────────────────────────────
+# ruff · format + lint
+# ────────────────────────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["data", "notebooks", "frontend"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM"]
+ignore = [
+    "E501",  # ruff format owns line length
+    "B008",  # function call in default arg (FastAPI/typer pattern)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+# ────────────────────────────────────────────────────────────────────────
+# mypy
+# ────────────────────────────────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.12"
+strict_optional = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+exclude = ["data/", "notebooks/", "frontend/"]
+
+# ────────────────────────────────────────────────────────────────────────
+# pytest
+# ────────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests", "nano", "industrial"]
+addopts = "-q -ra"
+markers = [
+    "slow: tests that load real models or run >1s",
+    "needs_cuda: requires CUDA",
+    "needs_mps: requires Apple Metal",
+]

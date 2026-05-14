@@ -1,0 +1,80 @@
+# ── Python ──────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+.eggs/
+*.egg-info/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+pip-wheel-metadata/
+.tox/
+.nox/
+.python-version
+
+# ── Node / Frontend ─────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Editors / OS ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Secrets / env ───────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+!.env.example
+*.pem
+*.key
+
+# ── ML data / models / runs · NEVER COMMIT ──────────────────────────────
+# We DO commit the data/ folder marker + its README, but ignore everything
+# else inside it. The trailing /* + ! pattern is the only form git respects
+# (negation can't undo an ignored directory).
+data/*
+!data/.gitkeep
+!data/README.md
+runs/
+wandb/
+mlruns/
+lightning_logs/
+*.pt
+*.bin
+*.safetensors
+*.gguf
+*.ckpt
+*.onnx
+
+# ── HF cache redirects (set HF_HOME=./data/hf_cache in .env) ────────────
+.cache/
+
+# ── Notebook checkpoints ────────────────────────────────────────────────
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+
+# ── uv / lockfiles you may want ─────────────────────────────────────────
+# uv.lock — KEEP this committed for reproducible installs
+# (don't ignore)

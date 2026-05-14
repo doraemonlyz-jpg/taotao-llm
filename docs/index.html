@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>taotao-llm · 从 0 训 LLM · 10 phase 学习路径</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230f1d35'/%3E%3Cpath d='M32 12 L 48 30 L 32 52 L 16 30 Z' fill='%23f4c95a' stroke='%23fff5d8' stroke-width='1.2' stroke-linejoin='round'/%3E%3Ccircle cx='32' cy='30' r='4' fill='%230f1d35'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Lora:wght@400;500;600&family=Outfit:wght@500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #0f1d35; --paper-2: #162844; --paper-card: #1c3155;
+  --ink: #f5ecd2; --ink-soft: #c8be9b; --ink-mute: #7e8aa6;
+  --rule: #2c4570; --rule-soft: #1f3458;
+  --gold: #f4c95a; --rust: #e08e6f; --leaf: #8eb58f; --sky: #6a96bc; --plum: #c0a3d1;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Lora", Georgia, serif; font-size: 17px; line-height: 1.7;
+  background: radial-gradient(ellipse at top left, rgba(140,180,220,.10), transparent 50%), var(--paper);
+  color: var(--ink); }
+.container { max-width: 940px; margin: 0 auto; padding: 0 2rem; }
+.nav { padding: 1.4rem 0; border-bottom: 1px solid var(--rule); }
+.nav-row { display: flex; justify-content: space-between; align-items: center; }
+.nav-brand { font-family: "Fraunces", serif; font-style: italic; font-weight: 600; font-size: 1.2rem; }
+.nav-brand .dot { color: var(--gold); }
+.hero { padding: 4rem 0 2.6rem; border-bottom: 1px solid var(--ink); }
+.eyebrow { font-family: "Outfit", sans-serif; font-size: 0.78rem; letter-spacing: .08em; color: var(--rust); text-transform: uppercase; font-weight: 600; margin-bottom: 1.2rem; }
+h1 { font-family: "Fraunces", serif; font-weight: 500; font-size: clamp(2.2rem, 5vw, 3.4rem); line-height: 1.1; margin: 0 0 1.4rem; letter-spacing: -0.02em; }
+h1 em { color: var(--rust); font-style: italic; }
+.lede { color: var(--ink-soft); font-size: 1.1rem; max-width: 36em; }
+.section { padding: 3rem 0; border-bottom: 1px dashed var(--rule); }
+.section h2 { font-family: "Fraunces", serif; font-weight: 500; font-size: 1.7rem; margin: 0 0 1.4rem; }
+table { width: 100%; border-collapse: collapse; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; font-size: .95rem; }
+th, td { padding: .8rem .95rem; text-align: left; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+th { background: rgba(143,202,160,.1); color: var(--ink); font-family: "Outfit", sans-serif; font-size: .78rem; letter-spacing: .04em; text-transform: uppercase; }
+tr:last-child td { border-bottom: 0; }
+.phase-num { font-family: "JetBrains Mono", monospace; color: var(--gold); font-weight: 600; }
+.phase-status { font-family: "Outfit", sans-serif; font-size: .72rem; letter-spacing: .05em; text-transform: uppercase; padding: .15rem .55rem; border-radius: 999px; border: 1px solid; display: inline-block; }
+.phase-status.done { color: var(--leaf); border-color: var(--leaf); }
+.phase-status.active { color: var(--gold); border-color: var(--gold); background: rgba(244,201,90,.08); }
+.phase-status.todo { color: var(--ink-mute); border-color: var(--rule); }
+.cb { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--gold); border-radius: 8px; padding: 1rem 1.2rem; margin: 1.2rem 0; }
+.cb-h { font-family: "Outfit", sans-serif; font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: .3rem; }
+a { color: var(--rust); border-bottom: 1px solid rgba(244,201,90,.4); text-decoration: none; }
+a:hover { background: rgba(244,201,90,.08); }
+.foot { padding: 3rem 0; text-align: center; color: var(--ink-mute); font-family: "Outfit", sans-serif; font-size: .88rem; }
+code { font-family: "JetBrains Mono", monospace; font-size: .85em; background: var(--paper-2); padding: .08rem .35rem; border-radius: 4px; color: var(--rust); border: 1px solid var(--rule-soft); }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-row">
+    <span class="nav-brand"><span class="dot">◆</span> taotao-llm</span>
+    <span style="font-family: 'Outfit', sans-serif; font-size: .85rem; color: var(--ink-mute);">Phase 0 · bootstrap</span>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="eyebrow">10 phase · 双轨实现 · ~3-4 个月</div>
+    <h1>从 0 <em>训出一个 LLM</em> · 然后让它接你的 agent</h1>
+    <p class="lede">
+      tokenizer · pretrain · SFT · LoRA · DPO · eval · 量化 · 部署。
+      每个 phase 给两份代码 (教学 nano · 工业 HF stack) + 一本配套书 + 一个里程碑 commit。
+      Mac (MPS) 友好 · toy 全程能跑 · 大模型走云。
+    </p>
+  </div>
+</header>
+
+<main class="container">
+
+<section class="section">
+  <h2>10 phase 学习路径</h2>
+  <table>
+    <thead><tr><th>#</th><th>主题</th><th>时长</th><th>交付物</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td class="phase-num">0</td><td>心智地图 · attention / token / loss / autoregressive 直觉</td><td>1 周</td><td>书 · README 路线图</td><td><span class="phase-status active">in progress</span></td></tr>
+      <tr><td class="phase-num">1</td><td>nanoGPT · 200 行 PyTorch · tiny shakespeare</td><td>2 周</td><td><code>nano/gpt.py</code> · <code>nano/train.py</code> · 书</td><td><span class="phase-status todo">pending</span></td></tr>
+      <tr><td class="phase-num">2</td><td>Tokenizer · char → BPE → SentencePiece · 自训 vocab</td><td>1 周</td><td><code>nano/tokenize.py</code> · <code>industrial/tokenizer/</code> · 书</td><td><span class="phase-status todo">pending</span></td></tr>
+      <tr><td class="phase-num">3</td><td>Pretrain · FineWeb 子集 · 100M-1B params · scaling law</td><td>2-3 周</td><td><code>industrial/pretrain/</code> · 书</td><td><span class="phase-status todo">pending</span></td></tr>
+      <tr><td class="phase-num">4</td><td>SFT · chat template · packing · masking</td><td>2 周</td><td><code>nano/sft.py</code> · <code>industrial/sft/</code> · 书</td><td><span class="phase-status todo">pending</span></td></tr>
+      <tr><td class="phase-num">5</td><td>LoRA / QLoRA · peft · 单卡 fine-tune 7B</td><td>1 周</td><td><code>industrial/lora/</code> · 书</td><td><span class="phase-status todo">pending</span></td></tr>
+      <tr><td class="phase-num">6</td><td>Preference · DPO / KTO / GRPO · trl</td><td>2 周</td><td><code>nano/dpo.py</code> · <code>industrial/dpo/</code> · 书</td><td><span class="phase-status todo">pending</span></td></tr>
+      <tr><td class="phase-num">7</td><td>Eval · lm-eval-harness · 自造 benchmark</td><td>1-2 周</td><td><code>industrial/eval/</code> · 书</td><td><span class="phase-status todo">pending</span></td></tr>
+      <tr><td class="phase-num">8</td><td>Infra · FlashAttention · FSDP · DeepSpeed · mixed precision</td><td>2-3 周</td><td><code>industrial/infra/</code> · 书</td><td><span class="phase-status todo">pending</span></td></tr>
+      <tr><td class="phase-num">9</td><td>量化 + 部署 · AWQ / GPTQ / GGUF · vLLM / Ollama / llama.cpp</td><td>1 周</td><td><code>industrial/deploy/</code> · 前端 chat UI · 书</td><td><span class="phase-status todo">pending</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="section">
+  <h2>双轨实现的逻辑</h2>
+  <div class="cb">
+    <p class="cb-h">为什么不只学工业版</p>
+    <p>HuggingFace 一行 <code>SFTTrainer(...).train()</code> 能做 SFT · 但你不知道<em>它在做什么</em>。
+    nano 版用 200 行 PyTorch 写一遍 · 你能讲出 chat template / loss masking / packing · 这是面试里<strong>把 mid 跟 senior 拉开</strong>的差距。</p>
+  </div>
+  <div class="cb">
+    <p class="cb-h">为什么不只学教学版</p>
+    <p>nano 跑不了真 7B 模型 · 也不会用 wandb / lm-eval / FSDP。<strong>能 ship 的工程师能读懂教学版 + 用工业版交付</strong>。两条腿走路。</p>
+  </div>
+</section>
+
+<section class="section">
+  <h2>跟 taotao-agent 的关系</h2>
+  <p>姊妹项目 <a href="https://github.com/doraemonlyz-jpg/taotao-agent">taotao-agent</a> 是 27 本书的 agent 全栈 reference。两个项目的接合点在 <strong>phase 9</strong> · 量化导出 → 注册到 Ollama → agent 跑你训的模型。</p>
+  <pre style="background: #0a1628; padding: 1rem 1.2rem; border-radius: 10px; border: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: .85rem; color: #e8e3d4;">
+taotao-llm  ──── 训出 base / SFT 模型 ────►  taotao-agent
+   (训练侧)                                      (应用侧)</pre>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="container">
+    <p>taotao-llm · v0.1 bootstrap · 2026-05 · MIT</p>
+    <p>
+      <a href="https://github.com/doraemonlyz-jpg/taotao-llm">GitHub</a> ·
+      <a href="https://github.com/doraemonlyz-jpg/taotao-agent">姊妹项目 taotao-agent</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

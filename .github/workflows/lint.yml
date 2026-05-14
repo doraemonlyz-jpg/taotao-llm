@@ -1,0 +1,20 @@
+name: lint
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - name: install dev tools
+        run: uv pip install --system "ruff>=0.7"
+      - name: ruff check
+        run: ruff check .
+      - name: ruff format check
+        run: ruff format --check .
