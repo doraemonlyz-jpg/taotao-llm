@@ -51,9 +51,22 @@ nano-dpo:  ## phase 6 · minimal DPO 演示
 industrial-tokenize:  ## phase 2 · HuggingFace tokenizers · GPT-2 同款配方
 	uv run python -m industrial.tokenizer.train_hf
 
+.PHONY: prepare-pretrain-data
+prepare-pretrain-data:  ## phase 3 · 拉 TinyStories · tokenize · 缓存到 data/pretrain/
+	uv run python -m industrial.pretrain.run prepare \
+		--dataset-name roneneldan/TinyStories --max-train-tokens 10000000
+
 .PHONY: industrial-pretrain
-industrial-pretrain:  ## phase 3 · 跑工业级 pretrain
-	uv run python -m industrial.pretrain.run
+industrial-pretrain:  ## phase 3 · 在已 prepare 的数据上训 tiny GPT (M2 air ~30 分钟)
+	uv run python -m industrial.pretrain.run train --size tiny --max-iters 3000
+
+.PHONY: pretrain-sample
+pretrain-sample:  ## phase 3 · 拿训完的 ckpt 续写 "Once upon a time"
+	uv run python -m industrial.pretrain.run sample
+
+.PHONY: scaling-law
+scaling-law:  ## phase 3 · 6-run 的 scaling law mini 实验 (~30 分钟)
+	uv run python scripts/scaling_law.py --quick
 
 .PHONY: industrial-sft
 industrial-sft:  ## phase 4 · trl SFTTrainer

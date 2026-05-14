@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book 03 · Pretrain · 数据 / scaling law / 真训出会写故事的小模型</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230f1d35'/%3E%3Cpath d='M32 12 L 48 30 L 32 52 L 16 30 Z' fill='%23f4c95a' stroke='%23fff5d8' stroke-width='1.2' stroke-linejoin='round'/%3E%3Ccircle cx='32' cy='30' r='4' fill='%230f1d35'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Lora:wght@400;500;600&family=Outfit:wght@500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
+<style>
+:root {
+  --paper: #0f1d35; --paper-2: #162844; --paper-card: #1c3155;
+  --ink: #f5ecd2; --ink-soft: #c8be9b; --ink-mute: #7e8aa6;
+  --rule: #2c4570; --rule-soft: #1f3458;
+  --gold: #f4c95a; --rust: #e08e6f; --leaf: #8eb58f; --sky: #6a96bc; --plum: #c0a3d1;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Lora", Georgia, serif; font-size: 17px; line-height: 1.75;
+  background: radial-gradient(ellipse at top left, rgba(140,180,220,.10), transparent 50%), var(--paper);
+  color: var(--ink); }
+.container { max-width: 880px; margin: 0 auto; padding: 0 2rem; }
+.nav { padding: 1.4rem 0; border-bottom: 1px solid var(--rule); }
+.nav-row { display: flex; justify-content: space-between; align-items: center; }
+.nav-brand { font-family: "Fraunces", serif; font-style: italic; font-weight: 600; font-size: 1.15rem; }
+.nav-brand .dot { color: var(--gold); }
+.nav-meta { font-family: "Outfit", sans-serif; font-size: .85rem; color: var(--ink-mute); }
+.hero { padding: 3.6rem 0 2.4rem; border-bottom: 1px solid var(--ink); }
+.eyebrow { font-family: "Outfit", sans-serif; font-size: .78rem; letter-spacing: .08em; color: var(--rust); text-transform: uppercase; font-weight: 600; margin-bottom: 1.2rem; }
+h1 { font-family: "Fraunces", serif; font-weight: 500; font-size: clamp(2rem, 4.4vw, 3rem); line-height: 1.12; margin: 0 0 1.2rem; letter-spacing: -0.02em; }
+h1 em { color: var(--rust); font-style: italic; }
+.lede { color: var(--ink-soft); font-size: 1.08rem; max-width: 36em; }
+section { padding: 2.6rem 0; border-bottom: 1px dashed var(--rule); }
+h2 { font-family: "Fraunces", serif; font-weight: 500; font-size: 1.55rem; margin: 0 0 1.2rem; color: var(--ink); letter-spacing: -.01em; }
+h3 { font-family: "Outfit", sans-serif; font-weight: 600; font-size: 1.05rem; margin: 1.6rem 0 .6rem; color: var(--gold); letter-spacing: .01em; }
+p { margin: 0 0 .9rem; }
+strong { color: var(--ink); }
+em { color: var(--rust); font-style: italic; }
+code { font-family: "JetBrains Mono", monospace; font-size: .86em; background: var(--paper-2); padding: .08rem .35rem; border-radius: 4px; color: var(--rust); border: 1px solid var(--rule-soft); }
+pre { background: #0a1628; padding: 1rem 1.2rem; border-radius: 10px; border: 1px solid var(--rule); border-left: 4px solid var(--sky); overflow-x: auto; margin: 1.2rem 0; }
+pre code { background: transparent; border: 0; padding: 0; color: #e8e3d4; font-size: .85rem; }
+.cb { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--gold); border-radius: 8px; padding: 1rem 1.2rem; margin: 1.2rem 0; }
+.cb-h { font-family: "Outfit", sans-serif; font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: .35rem; }
+.cb.warn { border-left-color: var(--rust); }
+.cb.note { border-left-color: var(--leaf); }
+.cb.math { border-left-color: var(--plum); }
+table { width: 100%; border-collapse: collapse; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; font-size: .94rem; margin: 1.2rem 0; }
+th, td { padding: .7rem .9rem; text-align: left; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+th { background: rgba(143,202,160,.1); color: var(--ink); font-family: "Outfit", sans-serif; font-size: .76rem; letter-spacing: .04em; text-transform: uppercase; }
+tr:last-child td { border-bottom: 0; }
+a { color: var(--rust); border-bottom: 1px solid rgba(244,201,90,.4); text-decoration: none; }
+a:hover { background: rgba(244,201,90,.08); }
+.toc { background: var(--paper-card); border: 1px solid var(--rule); border-radius: 10px; padding: 1.2rem 1.6rem; margin: 1.6rem 0; }
+.toc h3 { margin: 0 0 .6rem; font-family: "Outfit", sans-serif; font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-mute); }
+.toc ol { margin: 0; padding-left: 1.4rem; color: var(--ink-soft); }
+.toc a { color: var(--ink-soft); border-bottom: 0; }
+.toc a:hover { color: var(--gold); background: transparent; }
+ol.q { padding-left: 1.4rem; counter-reset: q; list-style: none; }
+ol.q > li { margin: .8rem 0 .8rem 0; padding-left: 2.4rem; position: relative; }
+ol.q > li::before { counter-increment: q; content: "Q" counter(q); position: absolute; left: 0; top: .05rem; font-family: "JetBrains Mono", monospace; font-size: .8rem; color: var(--gold); font-weight: 600; }
+.gloss { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem 1.4rem; font-size: .92rem; }
+.gloss dt { font-family: "Outfit", sans-serif; font-weight: 600; color: var(--gold); display: inline; }
+.gloss dd { display: inline; margin: 0 0 .35rem 0; color: var(--ink-soft); }
+.gloss .row { padding: .25rem 0; border-bottom: 1px dashed var(--rule-soft); }
+.foot { padding: 3rem 0; text-align: center; color: var(--ink-mute); font-family: "Outfit", sans-serif; font-size: .88rem; }
+hr.dim { border: 0; border-top: 1px dashed var(--rule); margin: 2.4rem 0; }
+.kbd { font-family: "JetBrains Mono", monospace; font-size: .8em; background: var(--paper-2); border: 1px solid var(--rule); border-radius: 4px; padding: .05rem .4rem; color: var(--leaf); }
+@media (max-width: 640px) { .gloss { grid-template-columns: 1fr; } .container { padding: 0 1.2rem; } }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-row">
+    <span class="nav-brand"><span class="dot">◆</span> taotao-llm</span>
+    <span class="nav-meta">Phase 3 · Book 03</span>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="eyebrow">Phase 3 · ~10M params · ~10M tokens · ~30 分钟 · 真能写故事</div>
+    <h1>Book 03 · <em>Pretrain</em> · 数据流水线 + scaling law + 在 Mac 上真训</h1>
+    <p class="lede">
+      你已经会写 GPT 模型 (Book 01) 和 tokenizer (Book 02)。
+      这一本把它俩接到 <strong>HuggingFace 数据集 + 真 pretrain pipeline</strong> ·
+      训出一个 10M 参数的 baby GPT 在 TinyStories 上 · 你会亲眼看到它从乱码 → 学会 "Once upon a time" 的句法 → 写出连贯的儿童故事。
+      同时讲清 <strong>Chinchilla scaling law / data quality > quantity / packing / 梯度累积</strong> 这些 senior 级硬通货。
+    </p>
+  </div>
+</header>
+
+<main class="container">
+
+<section>
+<div class="toc">
+  <h3>本书路线</h3>
+  <ol>
+    <li><a href="#what">1 · Pretrain 是什么 · 跟 SFT / RLHF 的关系</a></li>
+    <li><a href="#data">2 · Data is everything · FineWeb 的故事</a></li>
+    <li><a href="#cache">3 · tokenize-then-pack · 为什么要做 .bin 缓存</a></li>
+    <li><a href="#packing">4 · Packing · 文档间的 EOS 分隔</a></li>
+    <li><a href="#batch">5 · effective batch size · 梯度累积的几何</a></li>
+    <li><a href="#precision">6 · Mixed precision · MPS 的限制</a></li>
+    <li><a href="#sched">7 · LR schedule at scale</a></li>
+    <li><a href="#chinchilla">8 · Chinchilla · scaling law · N × D 的甜点</a></li>
+    <li><a href="#spike">9 · Loss spikes · 调试方法</a></li>
+    <li><a href="#resume">10 · Checkpoint resumption · 断点续训</a></li>
+    <li><a href="#rope">11 · RoPE 预告 · phase 8 详讲</a></li>
+    <li><a href="#run">12 · 实操 · 在你的 Mac 上跑一遍</a></li>
+    <li><a href="#qs">30 题 · 自检</a></li>
+    <li><a href="#gloss">60 词术语表</a></li>
+  </ol>
+</div>
+</section>
+
+<section id="what">
+<h2>1 · Pretrain 是什么 · 跟 SFT / RLHF 的关系</h2>
+
+<p>训练一个现代 LLM 通常分三段（Llama / GPT / Qwen / DeepSeek 都这样）：</p>
+
+<table>
+  <tr><th>阶段</th><th>数据</th><th>目标</th><th>占总成本</th><th>本书 phase</th></tr>
+  <tr><td><strong>Pretrain</strong></td><td>1-15T token · 网页 / 书 / code</td><td>next-token 预测</td><td><em>~95%</em></td><td>本书 (3)</td></tr>
+  <tr><td>SFT</td><td>10k-1M 条对话</td><td>"会聊天 / 听指令"</td><td>~3%</td><td>4</td></tr>
+  <tr><td>Preference (DPO/RLHF)</td><td>10k-100k 偏好对</td><td>对齐人类喜好</td><td>~2%</td><td>6</td></tr>
+</table>
+
+<p>Pretrain 是<strong>地基</strong>。它决定模型有多聪明 · 知道多少世界知识 · 中英能力强不强。SFT 和 DPO 只是"教礼仪" · 不会让一个不读书的模型变聪明。</p>
+
+<div class="cb note">
+  <p class="cb-h">本书的 toy 实验</p>
+  <p>我们在 <strong>TinyStories</strong>（200 万条 GPT-3.5 生成的儿童故事 · ~500MB）上训 10M 参数的 baby GPT。
+  TinyStories 的妙处：词汇受限 · 句法简单 · 10M 参数 + 10M token 就能学到<em>语法 + 简单叙事</em>。
+  比直接上 FineWeb（45TB · 大模型才学得动）适合 Mac 学习。</p>
+</div>
+</section>
+
+<section id="data">
+<h2>2 · Data is everything · FineWeb 的故事</h2>
+
+<p>2024 年最重要的 LLM 论文之一不是模型架构 · 是 HuggingFace 出的 <strong>FineWeb</strong> · 一个 15T token 的开源 web 语料。
+他们的关键贡献：<em>用同样的模型架构、同样的算力 · 仅仅换了清洗策略 · pretrain 后的模型在所有 benchmark 上比 RedPajama / Dolma 高 5-10 个点</em>。</p>
+
+<div class="cb math">
+  <p class="cb-h">规律</p>
+  <p>到 2024 年 · 大家公认：<strong>data quality > data quantity > model size > training time</strong>。
+  你能找到的 5 个 trick 里 · 4 个跟数据有关。</p>
+</div>
+
+<h3>FineWeb 的清洗 pipeline</h3>
+<ol>
+  <li><strong>language ID</strong>：fastText 跑一遍 · 只留你想要的语言</li>
+  <li><strong>quality classifier</strong>：用一个小分类器打分 · 过滤垃圾页</li>
+  <li><strong>deduplication</strong>：MinHash + LSH · 全集近重复去掉 (能去 60%+)</li>
+  <li><strong>repetition filter</strong>：连续重复字符 / 行 / n-gram 多的页面扔掉</li>
+  <li><strong>perplexity filter</strong>：拿小 LM 打分 · 删掉 ppl 太高的乱码页</li>
+  <li><strong>safety / PII</strong>：URL 黑名单 + 简单 PII 模式</li>
+</ol>
+
+<h3>本书没做这些 · 因为 TinyStories 已经是清洗好的</h3>
+<p>TinyStories 是 GPT-3.5 生成的 · 词汇受限 · 句法干净。直接用就行。
+真做 web 数据 pretrain · 上面 6 步至少占工程量的 60% · 而且每一步都需要 跑数据反复看 sample。</p>
+</section>
+
+<section id="cache">
+<h2>3 · tokenize-then-pack · 为什么要做 .bin 缓存</h2>
+
+<p>看 industrial/pretrain/data.py 里 <code>PretrainDataset.prepare()</code>。
+做的事：流式拉 HF 数据 → 每条 tokenize → 拼 stream → 写 .bin。<strong>一次准备 · 永远复用</strong>。</p>
+
+<div class="cb warn">
+  <p class="cb-h">不缓存的代价</p>
+  <p>HF 的 tokenizers Rust 版极快 · 但 1B token 还是要 10-30 分钟。
+  如果训练时每个 batch 现 tokenize · 你的 dataloader 会变成瓶颈 · GPU 一直在等 CPU。<br>
+  缓存到 .bin · 训练时直接 <code>np.memmap</code> · 几乎零开销。</p>
+</div>
+
+<h3>.bin 的结构</h3>
+<p>就一个连续的 token id 数组。dtype 看 vocab：</p>
+<table>
+  <tr><th>vocab</th><th>dtype</th><th>byte/token</th><th>1B token 占盘</th></tr>
+  <tr><td>≤ 65535</td><td>uint16</td><td>2</td><td>2 GB</td></tr>
+  <tr><td>≤ 4.3B</td><td>uint32</td><td>4</td><td>4 GB</td></tr>
+</table>
+
+<p>看 industrial/pretrain/data.py：</p>
+<pre><code>dtype = np.uint16 if vocab_size &lt; 2**16 else np.uint32
+arr = np.asarray(buf, dtype=dtype)
+arr.tofile(f)              # 顺序写
+# 训练时
+ids = np.memmap(d / "train.bin", dtype=dtype, mode="r")</code></pre>
+
+<p>memmap 是关键 trick：操作系统按需把磁盘页映射到内存 · <strong>不真把 10GB 全读到 RAM</strong>。
+你拿一个 batch · 就只触发那几页的读入。</p>
+</section>
+
+<section id="packing">
+<h2>4 · Packing · 文档间的 EOS 分隔</h2>
+
+<p>训练时一个 batch 是 (B, T) · T 是 block_size。但单条文档可能：</p>
+<ul>
+  <li><strong>太短</strong>（推特 / 短回复）：浪费 padding 空间</li>
+  <li><strong>太长</strong>（书 / 长论文）：截断 / 放不下</li>
+</ul>
+
+<p>解决：<em>把所有文档拼成一条超长 stream · 每条之间加 EOS · 然后随机切 (B, T) 窗口</em>。这就是 packing。</p>
+
+<pre><code># industrial/pretrain/data.py 的 _tokenize_and_pack
+for example in stream:
+    ids = tok.encode(example["text"], add_special_tokens=False)
+    buf.extend(ids)
+    buf.append(eos_id)        # ← 这一行 · 文档边界
+    ...
+
+# 训练时随机抽窗口
+ix = np.random.randint(0, len(ids) - block_size - 1, size=(batch_size,))
+x = np.stack([ids[i : i + block_size] for i in ix])</code></pre>
+
+<div class="cb">
+  <p class="cb-h">为什么要 EOS 分隔</p>
+  <p>不加 EOS · 模型会学到 "前一篇文档结尾" → "下一篇文档开头" 的虚假关联。
+  加 EOS · 模型学到的是 "看到 EOS 就 reset 注意力" · 行为更干净。
+  推理时也用 EOS 做 stop signal · 训练推理一致。</p>
+</div>
+
+<h3>跨边界 attention 怎么办</h3>
+<p>朴素 packing 下 · 一个 (B, T) 窗口可能横跨 3 篇文档。前两篇文档结尾<em>能看到</em>下一篇文档开头 (causal mask 不限边界)。
+有几种处理：</p>
+<table>
+  <tr><th>策略</th><th>实现</th><th>谁用</th></tr>
+  <tr><td><strong>不管</strong></td><td>不做特殊处理 · EOS 自然让模型学会 reset</td><td>大多数 · 包括 GPT-2 / Llama</td></tr>
+  <tr><td>document mask</td><td>在 attention 里禁止跨 EOS · attention 多一层 mask</td><td>Reformer · 一些研究模型</td></tr>
+  <tr><td>example packing</td><td>记录边界 · 用 attention bias 隔离</td><td>FlashAttention 2 支持</td></tr>
+</table>
+
+<p>本书 nano + industrial 都用第一种。简单 · 主流 · 实测损失可忽略。</p>
+</section>
+
+<section id="batch">
+<h2>5 · effective batch size · 梯度累积的几何</h2>
+
+<p>训 LLM 你会反复看到 "batch size 1024 · global batch size 4M tokens"。这两个是什么关系？</p>
+
+<div class="cb math">
+  <p class="cb-h">公式</p>
+  <p><strong>effective batch tokens = micro_batch_size × grad_accum_steps × block_size × world_size</strong></p>
+  <p>例：micro=16 · accum=4 · block=512 · 1 GPU → effective = 16×4×512×1 = <strong>32,768 tokens / step</strong></p>
+</div>
+
+<p>为什么不直接把 micro_batch 调到 64 · 干掉 accum？答案：<strong>显存不够</strong>。
+单次 forward + backward 的显存占用大概是：</p>
+<ul>
+  <li>activations: O(B · T · L · C) · linear 每层一份 · 这是大头</li>
+  <li>params + optimizer state: O(参数量 × 6) (AdamW: 1 weight + 2 momentum + 2 grad + 1 buffer)</li>
+</ul>
+
+<p>当 micro_batch × T 超过显存上限 · 就 OOM。grad accum 让你<em>省显存换计算时间</em>：</p>
+
+<pre><code># industrial/pretrain/train.py 的核心
+optim.zero_grad()
+for _ in range(grad_accum_steps):
+    xb, yb = ds.get_batch(...)
+    _, loss = model(xb, yb)
+    loss = loss / grad_accum_steps    # 关键 · 让累积梯度的尺度对
+    loss.backward()                    # 不 zero_grad · 梯度自动相加
+optim.step()                           # 只在 accum 完成后更新</code></pre>
+
+<h3>本书的设置</h3>
+<p>industrial/pretrain/train.py 默认 micro=16 · accum=4 · block=512 → effective batch = <strong>32,768 tokens</strong>。
+GPT-2 论文 effective batch ≈ 524,288 tokens · 是我们 16×。但教学项目这样足够看到 loss 平滑下降。</p>
+</section>
+
+<section id="precision">
+<h2>6 · Mixed precision · MPS 的限制</h2>
+
+<table>
+  <tr><th>精度</th><th>位</th><th>动态范围</th><th>显存</th><th>MPS 支持</th><th>建议</th></tr>
+  <tr><td>fp32</td><td>32</td><td>10⁻³⁸ ~ 10³⁸</td><td>baseline</td><td>✓ 完美</td><td>本项目默认</td></tr>
+  <tr><td>fp16</td><td>16</td><td>10⁻⁵ ~ 65k</td><td>0.5×</td><td>不稳 · loss → nan</td><td>Mac 上别用</td></tr>
+  <tr><td><strong>bfloat16</strong></td><td>16</td><td>10⁻³⁸ ~ 10³⁸</td><td>0.5×</td><td>M2+ 支持</td><td>云上 + GPU 选这个</td></tr>
+  <tr><td>fp8</td><td>8</td><td>更窄</td><td>0.25×</td><td>不支持</td><td>H100 / B200 才有意义</td></tr>
+</table>
+
+<h3>为什么 bf16 比 fp16 更稳</h3>
+<p>fp16 的指数位只有 5 bit · 表示范围 10⁻⁵ ~ 65k。
+LLM 训练时偶尔出现 large activation · 直接溢出 nan。
+bf16 指数位 8 bit (跟 fp32 一样) · 范围跟 fp32 同 · 只是<em>精度低</em>。
+对深度学习几乎免费午餐 · 因为深度学习的瓶颈是动态范围 · 不是 mantissa 精度。</p>
+
+<div class="cb warn">
+  <p class="cb-h">MPS 现状 (2026)</p>
+  <p>PyTorch MPS 后端正在补齐 bf16 支持 · 但还有边角 case 出问题。
+  本项目 MPS 默认 fp32 · 训练慢 30-50% · 但稳。
+  如果你在云上跑 H100 · 改用 <code>torch.cuda.amp.autocast(dtype=torch.bfloat16)</code> 即可。</p>
+</div>
+</section>
+
+<section id="sched">
+<h2>7 · LR schedule at scale</h2>
+
+<p>跟 phase 1 nano-train 用的同一个 cosine + warmup · 但有几个 scaling 时的细节：</p>
+
+<table>
+  <tr><th>规模</th><th>warmup</th><th>peak lr</th><th>min lr</th></tr>
+  <tr><td>nanoGPT (本书)</td><td>200 步</td><td>6e-4</td><td>6e-5</td></tr>
+  <tr><td>GPT-2 small (124M)</td><td>2000 步 (~10M token)</td><td>6e-4</td><td>6e-5</td></tr>
+  <tr><td>GPT-3 175B</td><td>~375M token</td><td>6e-5</td><td>6e-6</td></tr>
+  <tr><td>Llama-2 70B</td><td>2000 步</td><td>1.5e-4</td><td>1.5e-5</td></tr>
+  <tr><td>Llama-3 405B</td><td>8000 步</td><td>3e-4</td><td>3e-5</td></tr>
+</table>
+
+<div class="cb math">
+  <p class="cb-h">经验</p>
+  <p>peak lr 跟 batch size 大致成 √ 比例：batch ×4 → lr ×2。
+  实际项目里别太迷信公式 · 跑 3 个 lr 看 loss 曲线 · 选最低的那个。</p>
+</div>
+
+<h3>看代码</h3>
+<pre><code># nano/train.py 的 get_lr · industrial 复用
+if it &lt; warmup_iters:
+    return lr * (it + 1) / warmup_iters
+progress = (it - warmup_iters) / max(1, max_iters - warmup_iters)
+coeff = 0.5 * (1 + cos(π * progress))
+return min_lr + coeff * (lr - min_lr)</code></pre>
+
+<p>cosine 的好处：<strong>训练末尾 lr 自然趋近 min_lr</strong> · 模型可以做精细调整。
+对比 linear decay 在末尾 lr 突然归 0 · 容易在末段过拟合。</p>
+</section>
+
+<section id="chinchilla">
+<h2>8 · Chinchilla · scaling law · N × D 的甜点</h2>
+
+<p>2022 年 DeepMind 发了 <strong>Chinchilla</strong> 论文 · 终结了 "越大越好" 的盲信仰。</p>
+
+<div class="cb math">
+  <p class="cb-h">Chinchilla 经验律</p>
+  <p>给定算力 C (FLOPs) · 最优配置满足：</p>
+  <p>\[ N_{opt} \cdot D_{opt} \approx \frac{C}{6}, \quad N_{opt} \approx D_{opt} \cdot 5 \]</p>
+  <p>翻译：<strong>每个参数应该看 ~20 个 token</strong>。</p>
+</div>
+
+<table>
+  <tr><th>模型</th><th>params N</th><th>tokens D</th><th>D / N</th><th>评价</th></tr>
+  <tr><td>GPT-3 (2020)</td><td>175B</td><td>300B</td><td>1.7</td><td>严重欠训 · 被 Chinchilla 打脸</td></tr>
+  <tr><td>Chinchilla 70B</td><td>70B</td><td>1.4T</td><td>20</td><td>正合甜点</td></tr>
+  <tr><td>Llama-2 7B</td><td>7B</td><td>2T</td><td>286</td><td>故意过训 · 推理省成本</td></tr>
+  <tr><td>Llama-3 8B</td><td>8B</td><td>15T</td><td>1875</td><td>极端过训 · 数据是稀缺资源</td></tr>
+  <tr><td>本书 tiny</td><td>10M</td><td>10M</td><td>1</td><td>欠训 · 但 toy 不在乎</td></tr>
+</table>
+
+<div class="cb note">
+  <p class="cb-h">2024+ 的新共识</p>
+  <p>Chinchilla 假设 "训练算力 = 推理算力" · 但现实里推理是反复跑的。
+  <strong>过训小模型</strong>（Llama-3 那种 D/N=1000+）成本最优 · 因为推理时省更多。
+  本书的 toy 不考虑这个 · 但你做生产时要记住。</p>
+</div>
+
+<h3>跑你自己的 mini scaling law</h3>
+<p>scripts/scaling_law.py 有一个 6-run 网格 (tiny/mini × 200/600/1500 iters)：</p>
+<pre><code>uv run python scripts/scaling_law.py --quick</code></pre>
+
+<p>跑完看 <code>data/scaling/results.html</code>：你应该看到 (a) 同样 iters 下 mini 比 tiny loss 低 · (b) 同样 size 下 iters 越多 loss 越低 · 但 (c) 收益递减。这就是 scaling law 的低维投影。</p>
+</section>
+
+<section id="spike">
+<h2>9 · Loss spikes · 调试方法</h2>
+
+<p>训 LLM 你会遇到这种曲线：loss 平稳下降 · 突然某步暴涨 100x · 然后慢慢恢复（或炸成 nan 不归来）。
+这就是 <strong>loss spike</strong> · LLM 训练老朋友。</p>
+
+<h3>常见原因</h3>
+<table>
+  <tr><th>原因</th><th>判断</th><th>解</th></tr>
+  <tr><td>学习率太大</td><td>spike 集中在 warmup 后峰值期</td><td>lr 砍 1/2 · warmup 加倍</td></tr>
+  <tr><td>梯度炸掉</td><td>spike 时 |grad| 突然 100+</td><td>grad_clip 调低 · 0.5 / 0.3 · 用 mixed precision 时尤其</td></tr>
+  <tr><td>数据有脏</td><td>同一 batch 反复 spike</td><td>dump 那个 batch · 看是不是乱码 / 极长重复</td></tr>
+  <tr><td>fp16 溢出</td><td>weight / activation 突然 inf</td><td>换 bf16 或 fp32</td></tr>
+  <tr><td>Adam ε 太小</td><td>变量爆炸时 1/sqrt(v+ε) 不稳</td><td>ε 从 1e-8 调到 1e-5</td></tr>
+</table>
+
+<h3>预防</h3>
+<ul>
+  <li>每 N 步存一个 ckpt · spike 后能 rollback</li>
+  <li>定期 log <code>|grad|</code> 和 lr · 让 spike 可视</li>
+  <li>关键：<em>spike 后<strong>先看是不是数据问题</strong></em> · 80% 是数据 · 不是模型</li>
+</ul>
+
+<div class="cb">
+  <p class="cb-h">本书代码里的预防</p>
+  <p>industrial/pretrain/train.py 每步都 log <code>|grad|</code> · grad_clip=1.0 · 默认 fp32 · 这三件事消除了 90% 的 spike。</p>
+</div>
+</section>
+
+<section id="resume">
+<h2>10 · Checkpoint resumption · 断点续训</h2>
+
+<p>训 1B 模型一周不停机？不可能。机器会重启 · jupyter 会断 · 你会想换学习率。
+所以<strong>训练必须能从中断处接着跑</strong>。</p>
+
+<h3>要存什么</h3>
+<table>
+  <tr><th>状态</th><th>不存的后果</th></tr>
+  <tr><td><strong>model_state_dict</strong></td><td>白训</td></tr>
+  <tr><td><strong>optim_state_dict</strong></td><td>Adam 的 m / v 重置 · loss 立刻反弹</td></tr>
+  <tr><td><strong>iter 计数</strong></td><td>lr scheduler 错位</td></tr>
+  <tr><td>scheduler state</td><td>lr 错位 (scheduler 是无状态的可不存)</td></tr>
+  <tr><td>RNG state</td><td>同样 batch 顺序无法复现 · 可选</td></tr>
+  <tr><td>data 指针</td><td>下次会重看一遍 epoch · 可选</td></tr>
+</table>
+
+<h3>看代码</h3>
+<pre><code># industrial/pretrain/train.py 的 _save_ckpt
+torch.save({
+    "model_state": model.state_dict(),
+    "optim_state": optim.state_dict(),
+    "model_cfg": asdict(model.cfg),
+    "train_cfg": _serialise_cfg(cfg),
+    "iter": state.iter,
+    "best_val": state.best_val,
+}, path)
+
+# resume 时
+if cfg.resume and ckpt.exists():
+    blob = torch.load(ckpt, map_location=device, weights_only=False)
+    model.load_state_dict(blob["model_state"])
+    optim.load_state_dict(blob["optim_state"])
+    state.iter = blob["iter"]
+    state.best_val = blob["best_val"]</code></pre>
+
+<p>怎么用：</p>
+<pre><code>uv run python -m industrial.pretrain.run train --max-iters 1000      # 第一次
+# Ctrl-C 杀掉
+uv run python -m industrial.pretrain.run train --max-iters 3000 --resume   # 接着训</code></pre>
+</section>
+
+<section id="rope">
+<h2>11 · RoPE 预告 · phase 8 详讲</h2>
+
+<p>本书的 model 还用着 phase 1 的 learned absolute position embedding · 这是 GPT-2 的老配方。
+<strong>2022 后所有现代 LLM (Llama / Qwen / Mistral / DeepSeek) 都换了 RoPE</strong> (Rotary Position Embedding)。</p>
+
+<h3>RoPE 一句话</h3>
+<p>不再加位置 embedding · 而是把 query 和 key 向量按位置 t 旋转一个角度 · 让 attention 自带相对位置感。</p>
+<div class="cb math">
+  \[ q_t = R_t \cdot q, \quad k_t = R_t \cdot k \]
+  \[ q_t^\top k_s \;\propto\; (R_{t-s} q)^\top k = \text{相对位置依赖}\]
+</div>
+
+<h3>为什么要换</h3>
+<table>
+  <tr><th>RoPE 的好处</th><th>说明</th></tr>
+  <tr><td>外推</td><td>训 4k context · 推理塞 32k 还能勉强用</td></tr>
+  <tr><td>长上下文友好</td><td>NTK / YaRN scaling 方案都基于 RoPE</td></tr>
+  <tr><td>无参数</td><td>不占 embedding 矩阵 · 省参数</td></tr>
+</table>
+
+<p>实现只需要 30 行 PyTorch。phase 8 (infra) 我们会给 nano/gpt.py 加 RoPE 选项。</p>
+</section>
+
+<section id="run">
+<h2>12 · 实操 · 在你的 Mac 上跑一遍</h2>
+
+<p>三条命令 · M2 air ~40 分钟你就有一个会写小故事的 LLM：</p>
+
+<pre><code># 1. 拉数据 + tokenize + 缓存 (~3-5 分钟 · ~20MB)
+make prepare-pretrain-data
+
+# 2. 训 tiny GPT (~10M params · ~30 分钟)
+make industrial-pretrain
+
+# 3. 让它续写
+make pretrain-sample</code></pre>
+
+<h3>预期输出</h3>
+<pre><code>[device] mps
+[size]   tiny  block_size=512
+[data]   data/pretrain/tinystories · vocab=50257 · train=10,000,000 · val=1,000,000 tokens
+[model]  9.65M params · ...
+
+[iter   250] lr=7.50e-04  train=4.21  val=4.18  tok/s=18.0k  (180s)
+[iter   500] lr=6.00e-04  train=2.84  val=2.79  tok/s=18.0k  (340s)
+[iter  1000] lr=4.85e-04  train=2.05  val=2.01  tok/s=18.1k  (700s)
+[iter  2000] lr=2.10e-04  train=1.62  val=1.60  ...
+[iter  3000] lr=6.00e-05  train=1.49  val=1.48  ...
+
+# sample at iter 3000
+'Once upon a time, there was a little girl named Lily. She loved to play
+in the garden with her friends. One day, she found a shiny red apple.
+She picked it up and showed it to her mom. "Mommy, look what I found!"
+she said. Her mom smiled and said, "That's a beautiful apple, Lily."'</code></pre>
+
+<div class="cb note">
+  <p class="cb-h">看到这一段 · 你做对了所有事</p>
+  <p>10M 参数的小模型 · 在 10M token 上训 30 分钟 · 就能写出语法正确 / 角色一致 / 有简单情节的儿童故事。
+  这就是 emergent capabilities 在最低规模上的表现。再往上加 10× 参数和 100× 数据 · 你会看到指数级的 capability 跃迁。</p>
+</div>
+</section>
+
+<section id="qs">
+<h2>30 题 · 自检</h2>
+
+<ol class="q">
+  <li>Pretrain / SFT / RLHF 各自的目标 / 数据 / 占比是什么？</li>
+  <li>2024 年 LLM 的关键瓶颈是 model size · 算力 · 数据质量 · 还是别的？</li>
+  <li>FineWeb 的清洗 pipeline 至少能列 5 步是哪些？</li>
+  <li>为什么 tokenize 之后要缓存到 .bin · 不在训练时现做？</li>
+  <li>uint16 vs uint32 的 .bin 选择标准是什么？</li>
+  <li>memmap 是什么 · 为什么训练用它？</li>
+  <li>packing 的核心动作是什么？为什么文档间要加 EOS？</li>
+  <li>跨文档 attention 的 3 种处理策略是什么？本书用哪种？</li>
+  <li>effective batch tokens 的公式给一下。</li>
+  <li>梯度累积里那个 <code>loss / grad_accum_steps</code> 为什么必须？</li>
+  <li>fp16 vs bf16 的本质区别是什么？为什么 LLM 用 bf16？</li>
+  <li>MPS 上 fp16 的现状如何？建议用什么精度？</li>
+  <li>peak lr 跟 batch size 的经验关系是什么？</li>
+  <li>cosine schedule 跟 linear decay 比 · 优势在哪？</li>
+  <li>Chinchilla 公式是什么？D/N 甜点是几？</li>
+  <li>GPT-3 vs Chinchilla 哪个更接近最优？</li>
+  <li>2024 后 D/N 为什么从 20 涨到 1000+？</li>
+  <li>loss spike 最常见的 5 个原因是什么？</li>
+  <li>spike 后第一件该看的事是什么？</li>
+  <li>Adam ε 调大能解决什么问题？</li>
+  <li>checkpoint 至少要存哪 3 件事才能续训？</li>
+  <li>不存 optim state 续训会发生什么？</li>
+  <li>RoPE 的核心 idea 一句话怎么说？</li>
+  <li>RoPE 比 learned absolute position 好在哪 3 点？</li>
+  <li>本书 toy 模型 D/N 是多少？这意味着什么？</li>
+  <li>TinyStories 适合 toy pretrain 的两个原因是什么？</li>
+  <li>train.py 里 <code>tokens_seen</code> 怎么算？</li>
+  <li>val loss vs train loss · 看哪个判断要不要早停？</li>
+  <li>gradient accumulation 跟分布式数据并行 (DDP) 的关系是什么？</li>
+  <li>本书 industrial pretrain 没做的 3 件事 (留给 phase 8) 是什么？</li>
+</ol>
+
+<div class="cb note">
+  <p class="cb-h">参考：Q29</p>
+  <p>都是用 micro-batch 凑大 effective batch。grad accum 在<em>同一卡</em>多次 forward · DDP 是<em>多卡</em>同时 forward。
+  实践中两者经常一起用 · 比如 8 卡 × accum=4 · 一步训 32 个 micro-batch。</p>
+</div>
+</section>
+
+<section id="gloss">
+<h2>60 词术语表</h2>
+
+<dl class="gloss">
+<div class="row"><dt>pretrain</dt> <dd>第一阶段训练 · next-token 预测</dd></div>
+<div class="row"><dt>SFT</dt> <dd>Supervised Fine-Tuning · phase 4</dd></div>
+<div class="row"><dt>RLHF / DPO</dt> <dd>偏好对齐 · phase 6</dd></div>
+<div class="row"><dt>FineWeb</dt> <dd>HuggingFace 的 15T 开源 web 语料</dd></div>
+<div class="row"><dt>RedPajama</dt> <dd>Together AI 的复现 LLaMA 数据集</dd></div>
+<div class="row"><dt>SlimPajama</dt> <dd>RedPajama 的去重清洗版</dd></div>
+<div class="row"><dt>C4</dt> <dd>Google T5 用的 Common Crawl 子集</dd></div>
+<div class="row"><dt>The Pile</dt> <dd>EleutherAI 早期开源混合语料</dd></div>
+<div class="row"><dt>TinyStories</dt> <dd>本书用的 GPT-3.5 生成儿童故事数据集</dd></div>
+<div class="row"><dt>data deduplication</dt> <dd>去重 · MinHash / LSH 常用</dd></div>
+<div class="row"><dt>quality classifier</dt> <dd>给页面打质量分的小模型</dd></div>
+<div class="row"><dt>perplexity filter</dt> <dd>用小 LM 过滤乱码页</dd></div>
+<div class="row"><dt>language ID</dt> <dd>fastText 跑出的语言标签</dd></div>
+<div class="row"><dt>PII</dt> <dd>Personally Identifiable Information · 隐私数据</dd></div>
+<div class="row"><dt>tokenize-then-pack</dt> <dd>预 tokenize + 拼 stream + 缓存</dd></div>
+<div class="row"><dt>.bin file</dt> <dd>uint16 / uint32 的连续 token id 数组</dd></div>
+<div class="row"><dt>memmap</dt> <dd>OS 把磁盘按需映射到内存</dd></div>
+<div class="row"><dt>packing</dt> <dd>多文档拼成长 stream · 切窗口</dd></div>
+<div class="row"><dt>EOS separator</dt> <dd>文档间的分隔 token</dd></div>
+<div class="row"><dt>document mask</dt> <dd>禁止 attention 跨文档</dd></div>
+<div class="row"><dt>micro batch size</dt> <dd>单次 forward 的 batch</dd></div>
+<div class="row"><dt>grad_accum_steps</dt> <dd>梯度累积步数</dd></div>
+<div class="row"><dt>effective batch tokens</dt> <dd>每个 optim step 看的 token 总数</dd></div>
+<div class="row"><dt>world size</dt> <dd>分布式训练里的总 GPU 数</dd></div>
+<div class="row"><dt>DDP</dt> <dd>Distributed Data Parallel · 多卡数据并行</dd></div>
+<div class="row"><dt>FSDP</dt> <dd>Fully Sharded DP · 把参数切到多卡</dd></div>
+<div class="row"><dt>fp32 / fp16 / bf16</dt> <dd>32 / 16 / 16 位浮点</dd></div>
+<div class="row"><dt>fp8</dt> <dd>8 位浮点 · H100+ 才有意义</dd></div>
+<div class="row"><dt>mixed precision</dt> <dd>主参 fp32 + 计算 fp16/bf16</dd></div>
+<div class="row"><dt>autocast</dt> <dd>PyTorch 的 mixed precision context</dd></div>
+<div class="row"><dt>gradient scaler</dt> <dd>fp16 防下溢用</dd></div>
+<div class="row"><dt>warmup steps</dt> <dd>lr 从 0 线性涨到 peak 的步数</dd></div>
+<div class="row"><dt>cosine schedule</dt> <dd>余弦衰减</dd></div>
+<div class="row"><dt>linear decay</dt> <dd>线性衰减 · 末段陡</dd></div>
+<div class="row"><dt>WSD</dt> <dd>Warmup-Stable-Decay schedule (Llama-3 用)</dd></div>
+<div class="row"><dt>scaling law</dt> <dd>loss vs N / D / C 的幂律</dd></div>
+<div class="row"><dt>Chinchilla</dt> <dd>2022 DeepMind 的 scaling 论文</dd></div>
+<div class="row"><dt>compute-optimal</dt> <dd>给定算力的最优 N × D 配置</dd></div>
+<div class="row"><dt>FLOPs</dt> <dd>浮点运算次数 · 算力单位</dd></div>
+<div class="row"><dt>training compute</dt> <dd>训练总 FLOPs ≈ 6 N D</dd></div>
+<div class="row"><dt>inference compute</dt> <dd>推理 FLOPs ≈ 2 N · per token</dd></div>
+<div class="row"><dt>over-training</dt> <dd>D / N 远超 Chinchilla 甜点</dd></div>
+<div class="row"><dt>loss spike</dt> <dd>训练中突然爆涨的 loss</dd></div>
+<div class="row"><dt>grad clip</dt> <dd>限制全局梯度 norm</dd></div>
+<div class="row"><dt>gradient norm</dt> <dd>所有参数梯度的全局 L2</dd></div>
+<div class="row"><dt>Adam epsilon</dt> <dd>1/sqrt(v+ε) 里的 ε 防 div0</dd></div>
+<div class="row"><dt>checkpoint</dt> <dd>训练中断点 · model + optim state</dd></div>
+<div class="row"><dt>resume</dt> <dd>从 ckpt 续训</dd></div>
+<div class="row"><dt>RoPE</dt> <dd>Rotary Position Embedding</dd></div>
+<div class="row"><dt>NTK / YaRN scaling</dt> <dd>RoPE 长上下文外推方案</dd></div>
+<div class="row"><dt>RMSNorm</dt> <dd>LayerNorm 简化版 · Llama 用</dd></div>
+<div class="row"><dt>SwiGLU</dt> <dd>门控激活 · Llama / Mistral 用</dd></div>
+<div class="row"><dt>FlashAttention</dt> <dd>低显存 attention kernel</dd></div>
+<div class="row"><dt>tok/sec</dt> <dd>训练吞吐</dd></div>
+<div class="row"><dt>MFU</dt> <dd>Model FLOPs Utilization · GPU 利用率指标</dd></div>
+<div class="row"><dt>effective lr</dt> <dd>实际作用的学习率 (含 warmup / schedule)</dd></div>
+<div class="row"><dt>data-parallel size</dt> <dd>同 DDP world_size</dd></div>
+<div class="row"><dt>zero-shot</dt> <dd>无 few-shot 示例</dd></div>
+<div class="row"><dt>emergent capability</dt> <dd>规模到一定程度才出现的能力</dd></div>
+<div class="row"><dt>checkpoint averaging</dt> <dd>多 ckpt 平均 · 提稳定性</dd></div>
+</dl>
+</section>
+
+<hr class="dim">
+
+<section style="border-bottom:0;">
+<h2>下一本</h2>
+<p><a href="./index.html">← 回 phase 总览</a> · 接下来 <strong>Book 04 · SFT</strong> · 拿训好的 base model · 用 chat 数据微调它会聊天。
+跟 pretrain 比 · SFT 数据少 100x · 但对 "听话" 至关重要。</p>
+
+<div class="cb">
+  <p class="cb-h">commit 这一本对应的代码</p>
+  <p>
+    <code>industrial/pretrain/{__init__,data,model,train,run}.py</code> ·
+    <code>scripts/scaling_law.py</code> · <code>tests/test_pretrain.py</code><br>
+    跑通：<span class="kbd">make prepare-pretrain-data</span> → <span class="kbd">make industrial-pretrain</span> → <span class="kbd">make pretrain-sample</span><br>
+    可选：<span class="kbd">make scaling-law</span> · 6-run 网格 · ~30 分钟 · 看 loss vs (N, iters)。
+  </p>
+</div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="container">
+    <p>taotao-llm · Book 03 · Phase 3 · MIT</p>
+    <p>
+      <a href="./index.html">总览</a> ·
+      <a href="./02-tokenizer.html">← Book 02</a> ·
+      <a href="https://github.com/doraemonlyz-jpg/taotao-llm">GitHub</a> ·
+      <a href="https://github.com/doraemonlyz-jpg/taotao-agent">姊妹项目 taotao-agent</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
