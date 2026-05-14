@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book 01 · nanoGPT · 200 行写一个会写莎士比亚的小模型</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230f1d35'/%3E%3Cpath d='M32 12 L 48 30 L 32 52 L 16 30 Z' fill='%23f4c95a' stroke='%23fff5d8' stroke-width='1.2' stroke-linejoin='round'/%3E%3Ccircle cx='32' cy='30' r='4' fill='%230f1d35'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Lora:wght@400;500;600&family=Outfit:wght@500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
+<style>
+:root {
+  --paper: #0f1d35; --paper-2: #162844; --paper-card: #1c3155;
+  --ink: #f5ecd2; --ink-soft: #c8be9b; --ink-mute: #7e8aa6;
+  --rule: #2c4570; --rule-soft: #1f3458;
+  --gold: #f4c95a; --rust: #e08e6f; --leaf: #8eb58f; --sky: #6a96bc; --plum: #c0a3d1;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Lora", Georgia, serif; font-size: 17px; line-height: 1.75;
+  background: radial-gradient(ellipse at top left, rgba(140,180,220,.10), transparent 50%), var(--paper);
+  color: var(--ink); }
+.container { max-width: 880px; margin: 0 auto; padding: 0 2rem; }
+.nav { padding: 1.4rem 0; border-bottom: 1px solid var(--rule); }
+.nav-row { display: flex; justify-content: space-between; align-items: center; }
+.nav-brand { font-family: "Fraunces", serif; font-style: italic; font-weight: 600; font-size: 1.15rem; }
+.nav-brand .dot { color: var(--gold); }
+.nav-meta { font-family: "Outfit", sans-serif; font-size: .85rem; color: var(--ink-mute); }
+.hero { padding: 3.6rem 0 2.4rem; border-bottom: 1px solid var(--ink); }
+.eyebrow { font-family: "Outfit", sans-serif; font-size: .78rem; letter-spacing: .08em; color: var(--rust); text-transform: uppercase; font-weight: 600; margin-bottom: 1.2rem; }
+h1 { font-family: "Fraunces", serif; font-weight: 500; font-size: clamp(2rem, 4.4vw, 3rem); line-height: 1.12; margin: 0 0 1.2rem; letter-spacing: -0.02em; }
+h1 em { color: var(--rust); font-style: italic; }
+.lede { color: var(--ink-soft); font-size: 1.08rem; max-width: 36em; }
+section { padding: 2.6rem 0; border-bottom: 1px dashed var(--rule); }
+h2 { font-family: "Fraunces", serif; font-weight: 500; font-size: 1.55rem; margin: 0 0 1.2rem; color: var(--ink); letter-spacing: -.01em; }
+h3 { font-family: "Outfit", sans-serif; font-weight: 600; font-size: 1.05rem; margin: 1.6rem 0 .6rem; color: var(--gold); letter-spacing: .01em; }
+p { margin: 0 0 .9rem; }
+strong { color: var(--ink); }
+em { color: var(--rust); font-style: italic; }
+code { font-family: "JetBrains Mono", monospace; font-size: .86em; background: var(--paper-2); padding: .08rem .35rem; border-radius: 4px; color: var(--rust); border: 1px solid var(--rule-soft); }
+pre { background: #0a1628; padding: 1rem 1.2rem; border-radius: 10px; border: 1px solid var(--rule); border-left: 4px solid var(--sky); overflow-x: auto; margin: 1.2rem 0; }
+pre code { background: transparent; border: 0; padding: 0; color: #e8e3d4; font-size: .85rem; }
+.cb { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--gold); border-radius: 8px; padding: 1rem 1.2rem; margin: 1.2rem 0; }
+.cb-h { font-family: "Outfit", sans-serif; font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: .35rem; }
+.cb.warn { border-left-color: var(--rust); }
+.cb.note { border-left-color: var(--leaf); }
+.cb.math { border-left-color: var(--plum); }
+table { width: 100%; border-collapse: collapse; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; font-size: .94rem; margin: 1.2rem 0; }
+th, td { padding: .7rem .9rem; text-align: left; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+th { background: rgba(143,202,160,.1); color: var(--ink); font-family: "Outfit", sans-serif; font-size: .76rem; letter-spacing: .04em; text-transform: uppercase; }
+tr:last-child td { border-bottom: 0; }
+a { color: var(--rust); border-bottom: 1px solid rgba(244,201,90,.4); text-decoration: none; }
+a:hover { background: rgba(244,201,90,.08); }
+.toc { background: var(--paper-card); border: 1px solid var(--rule); border-radius: 10px; padding: 1.2rem 1.6rem; margin: 1.6rem 0; }
+.toc h3 { margin: 0 0 .6rem; font-family: "Outfit", sans-serif; font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-mute); }
+.toc ol { margin: 0; padding-left: 1.4rem; color: var(--ink-soft); }
+.toc a { color: var(--ink-soft); border-bottom: 0; }
+.toc a:hover { color: var(--gold); background: transparent; }
+ol.q { padding-left: 1.4rem; counter-reset: q; list-style: none; }
+ol.q > li { margin: .8rem 0 .8rem 0; padding-left: 2.4rem; position: relative; }
+ol.q > li::before { counter-increment: q; content: "Q" counter(q); position: absolute; left: 0; top: .05rem; font-family: "JetBrains Mono", monospace; font-size: .8rem; color: var(--gold); font-weight: 600; }
+.gloss { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem 1.4rem; font-size: .92rem; }
+.gloss dt { font-family: "Outfit", sans-serif; font-weight: 600; color: var(--gold); display: inline; }
+.gloss dd { display: inline; margin: 0 0 .35rem 0; color: var(--ink-soft); }
+.gloss .row { padding: .25rem 0; border-bottom: 1px dashed var(--rule-soft); }
+.foot { padding: 3rem 0; text-align: center; color: var(--ink-mute); font-family: "Outfit", sans-serif; font-size: .88rem; }
+.shape { font-family: "JetBrains Mono", monospace; color: var(--leaf); font-size: .82em; }
+hr.dim { border: 0; border-top: 1px dashed var(--rule); margin: 2.4rem 0; }
+@media (max-width: 640px) { .gloss { grid-template-columns: 1fr; } .container { padding: 0 1.2rem; } }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-row">
+    <span class="nav-brand"><span class="dot">◆</span> taotao-llm</span>
+    <span class="nav-meta">Phase 1 · Book 01</span>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="eyebrow">Phase 1 · 200 行 PyTorch · ~10 分钟训完</div>
+    <h1>Book 01 · <em>nanoGPT</em> · 让小模型学会写莎士比亚</h1>
+    <p class="lede">
+      这一本不讲空的。我们手撸一个 decoder-only transformer · 在 1MB 莎士比亚文本上训出会写古英文台词的字符级语言模型。
+      读完你能讲清楚 <strong>attention 为什么是 QKᵀ/√d</strong> · <strong>causal mask 长什么样</strong> · <strong>weight tying 省了多少参数</strong> ·
+      以及为什么 PyTorch 这套写法能跑出 GPT-3。
+    </p>
+  </div>
+</header>
+
+<main class="container">
+
+<section>
+<div class="toc">
+  <h3>本书路线</h3>
+  <ol>
+    <li><a href="#why">1 · 为什么先写 nanoGPT</a></li>
+    <li><a href="#lm">2 · 自回归语言建模 · 最小目标函数</a></li>
+    <li><a href="#attn">3 · Self-Attention · 从零推导 QKᵀ/√d</a></li>
+    <li><a href="#mha">4 · Multi-Head · 为什么要切多个头</a></li>
+    <li><a href="#causal">5 · Causal Mask · 一行代码不偷看未来</a></li>
+    <li><a href="#pos">6 · Position Embedding · 给序列一个时间感</a></li>
+    <li><a href="#block">7 · Pre-LN Block · GPT-2 后的标准结构</a></li>
+    <li><a href="#tie">8 · Weight Tying · 一个被低估的 trick</a></li>
+    <li><a href="#train">9 · Training Loop · AdamW + cosine + warmup</a></li>
+    <li><a href="#sample">10 · Sampling · temperature / top-k 的几何直觉</a></li>
+    <li><a href="#mps">11 · macOS / MPS 适配的几个坑</a></li>
+    <li><a href="#qs">30 题 · 自检</a></li>
+    <li><a href="#gloss">60 词术语表</a></li>
+  </ol>
+</div>
+</section>
+
+<section id="why">
+<h2>1 · 为什么先写 nanoGPT</h2>
+<p>HuggingFace 一行 <code>AutoModelForCausalLM.from_pretrained("gpt2")</code> 你就能跑 GPT。
+但你<em>不知道它在做什么</em>。面试官问你 "解释一下 attention" · 你只会说 "Q 乘 K 转置"。
+这一本的目的就是让你能<strong>从空文件开始</strong> · 写到 <code>generate()</code> 出语言模型样本。</p>
+
+<div class="cb note">
+  <p class="cb-h">读完你能</p>
+  <p>① 在白板上画出一个 transformer block 的 forward 图 · ② 解释为什么 attention 里要除 √dₖ · ③ 看懂 nanoGPT / Llama / Mistral 的源码 · ④ 在自己的 Mac 上跑通从训练到采样的整条链路 · ⑤ 知道 phase 2-9 接下来要补什么。</p>
+</div>
+
+<h3>不学这一节会怎样</h3>
+<p>你会变成 "<em>HuggingFace API 调用员</em>"。能 fine-tune · 但调不动深层问题：模型不收敛 / loss spike / OOM / 推理慢。
+这些问题的根都在 transformer 内部 · 你必须看过它的肚子。</p>
+</section>
+
+<section id="lm">
+<h2>2 · 自回归语言建模 · 最小目标函数</h2>
+<p>"语言模型" 听起来神秘。它的数学表达只有一行：</p>
+<div class="cb math">
+\[ p(x_1, x_2, \ldots, x_T) = \prod_{t=1}^{T} p(x_t \mid x_1, x_2, \ldots, x_{t-1}) \]
+  <p class="cb-h" style="margin-top:.6rem">人话</p>
+  <p>一段文字的概率 = 每个 token 给定<em>前面所有 token</em> 的条件概率之乘积。</p>
+</div>
+
+<p>训练时 · 我们最小化负对数似然（neg-log-likelihood）：</p>
+<div class="cb math">
+\[ \mathcal{L} = -\frac{1}{T} \sum_{t=1}^{T} \log p_\theta(x_t \mid x_{<t}) \]
+</div>
+
+<p>这正好就是 PyTorch 里的 cross_entropy。看 nano/gpt.py 第 <code>forward()</code> 末尾：</p>
+<pre><code>loss = F.cross_entropy(
+    logits.view(-1, logits.size(-1)),  # (B·T, vocab)
+    targets.view(-1),                  # (B·T,)
+    ignore_index=-1,
+)</code></pre>
+
+<p>"<em>autoregressive</em>" 的字面意思就是 "<strong>用过去预测下一个</strong>"。模型不能看 t+1 · 这个 "不能看" 是靠 causal mask 强制的（见第 5 节）。</p>
+
+<h3>训练数据长什么样</h3>
+<p>我们把 1MB 莎士比亚整本切成 65 个唯一字符的 id 流。每次随机抽一个长度 256 的窗口当 input · 把它<em>向左平移一位</em>当 target：</p>
+<pre><code>input  = "ROMEO: But, soft! what light through yonder window break"
+target = "OMEO: But, soft! what light through yonder window breaks"</code></pre>
+<p>这样在每个位置 t · 模型都要预测 input[t+1]。一个 batch 同时学 256 个预测任务 · 训练效率远高于 RNN。</p>
+</section>
+
+<section id="attn">
+<h2>3 · Self-Attention · 从零推导 QKᵀ/√d</h2>
+
+<h3>动机：为什么不用 RNN</h3>
+<p>RNN 把序列建模成 "隐状态滚动" · 第 t 步的 hidden 必须等第 t-1 步算完。<strong>串行 = 慢</strong> · 而且远距离信息要经过 t 次衰减。
+attention 的核心 idea 是 <em>每个位置直接看其它所有位置一眼</em> · 一次并行算完。</p>
+
+<h3>三个矩阵：Q · K · V</h3>
+<p>对每个输入向量 <span class="shape">x ∈ ℝᶜ</span> · 我们用三个线性层把它映射到三个角色：</p>
+<table>
+  <tr><th>名字</th><th>角色</th><th>类比</th></tr>
+  <tr><td><strong>Query</strong> (q)</td><td>"我在找什么"</td><td>搜索引擎里你输的关键词</td></tr>
+  <tr><td><strong>Key</strong> (k)</td><td>"我能匹配什么"</td><td>网页的 title</td></tr>
+  <tr><td><strong>Value</strong> (v)</td><td>"我能给出什么内容"</td><td>网页的正文</td></tr>
+</table>
+
+<p>给 query q · 我们用它跟所有 key 算相似度 · 越像的拿越多对应 value：</p>
+<div class="cb math">
+\[ \text{Attention}(q, K, V) = \text{softmax}\!\left(\frac{q K^\top}{\sqrt{d_k}}\right) V \]
+</div>
+
+<h3>为什么要除以 √dₖ</h3>
+<p>这是<strong>面试高频题</strong>。简短答：防止 softmax 输入方差过大导致梯度消失。</p>
+
+<div class="cb math">
+  <p class="cb-h">推导</p>
+  <p>设 q · k 各分量独立 · 均值 0 · 方差 1。则 <code>q · k = Σᵢ qᵢ kᵢ</code> 共 dₖ 项。
+  方差 = dₖ × 1 = <strong>dₖ</strong> · 标准差 = √dₖ。</p>
+  <p>不除 · 当 dₖ=64 · qᵀk 量级 ~8 · softmax 接近 one-hot · 梯度几乎为 0。
+  除以 √dₖ 后 · 方差归一到 1 · softmax 仍在 "软" 区间 · 梯度健康。</p>
+</div>
+
+<h3>从单 query 到 batch</h3>
+<p>实战中我们一次算 B 个序列 · 每个序列 T 个 query · 全用矩阵：</p>
+<pre><code>Q, K, V ∈ ℝ^(B, T, C)         # 三个 Linear 算出来
+scores  = Q @ K.transpose(-2, -1) / sqrt(d_k)   # (B, T, T)
+weights = softmax(scores + causal_mask)         # (B, T, T)
+out     = weights @ V                            # (B, T, C)</code></pre>
+
+<p>两个矩乘 · 一个 softmax · 这就是 attention 的全部。</p>
+</section>
+
+<section id="mha">
+<h2>4 · Multi-Head · 为什么要切多个头</h2>
+<p>单头 attention 只能学一种 "怎么看" 的策略。multi-head 把 C 维隐空间切成 h 份 · 每份独立做 attention · 最后拼回来。</p>
+
+<div class="cb">
+  <p class="cb-h">直觉</p>
+  <p>一个头可能学 "哪些字符常一起出现"（句法）· 另一个学 "哪些指代了同一个角色"（语义）· 又一个学 "押韵"。h 越大 · 模型能并行追踪的关系越多。</p>
+</div>
+
+<p>看 nano/gpt.py 里 <code>CausalSelfAttention.forward()</code>：</p>
+<pre><code>q = q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+k = k.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+v = v.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+# (B, n_head, T, head_dim) — h 个独立的 attention 在并行
+y = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+y = y.transpose(1, 2).contiguous().view(B, T, C)  # 拼回 (B, T, C)</code></pre>
+
+<p>关键观察：multi-head <strong>不增加参数量</strong>（C 维度还是 C）· 只是<em>把同样的容量切片用</em>。所以一般 head_dim 在 32-128 之间 · 太小学不到东西 · 太大不如开多头。</p>
+
+<h3>常见配置</h3>
+<table>
+  <tr><th>模型</th><th>n_layer</th><th>n_head</th><th>n_embd</th><th>head_dim</th></tr>
+  <tr><td>nano (本书)</td><td>6</td><td>6</td><td>384</td><td>64</td></tr>
+  <tr><td>GPT-2 small</td><td>12</td><td>12</td><td>768</td><td>64</td></tr>
+  <tr><td>GPT-2 XL</td><td>48</td><td>25</td><td>1600</td><td>64</td></tr>
+  <tr><td>Llama-2 7B</td><td>32</td><td>32</td><td>4096</td><td>128</td></tr>
+  <tr><td>Llama-3 70B</td><td>80</td><td>64</td><td>8192</td><td>128</td></tr>
+</table>
+<p>注意 head_dim 长期稳定在 64 / 128 · 这不是巧合 · 是 GPU tile / FlashAttention 的硬件甜点。</p>
+</section>
+
+<section id="causal">
+<h2>5 · Causal Mask · 一行代码不偷看未来</h2>
+<p>语言模型必须保证：第 t 个 token 只能看 1..t · <strong>不能看 t+1..T</strong>。否则训练时模型直接照抄 target · 推理时啥也不会。</p>
+
+<p>实现：在 softmax 之前 · 把 attention scores 矩阵的<em>上三角</em>填成 -∞。softmax 之后这些位置的权重就是 0。</p>
+
+<pre><code># 不用 SDPA 时手搓 mask
+mask = torch.triu(torch.ones(T, T), diagonal=1).bool()  # 上三角 True
+scores = scores.masked_fill(mask, float('-inf'))
+weights = scores.softmax(dim=-1)</code></pre>
+
+<p>用 PyTorch ≥ 2.0 的 <code>F.scaled_dot_product_attention(..., is_causal=True)</code> · 这一切自动 · 而且会 fuse 成一个 kernel · MPS / CUDA 都加速。</p>
+
+<div class="cb warn">
+  <p class="cb-h">坑</p>
+  <p><code>is_causal=True</code> 只在 query/key 序列<strong>等长</strong>时正确。如果你做 cross-attention（encoder-decoder）· 必须显式传 attn_mask · 别图省事。</p>
+</div>
+
+<h3>mask 的几何长相</h3>
+<pre><code>T=4 · 1=可看 · 0=屏蔽
+
+       k0 k1 k2 k3
+   q0 [ 1  0  0  0 ]
+   q1 [ 1  1  0  0 ]
+   q2 [ 1  1  1  0 ]
+   q3 [ 1  1  1  1 ]</code></pre>
+<p>下三角矩阵。第 t 行只有前 t+1 列是 1 · 严格不偷看未来。</p>
+</section>
+
+<section id="pos">
+<h2>6 · Position Embedding · 给序列一个时间感</h2>
+<p>attention 是 <em>排列不变的</em>。打乱 input 的顺序 · attention 输出会跟着乱 · 但<strong>注意力权重的相对结构不变</strong>。
+所以你必须额外注入 "我在第几个位置" 的信号。</p>
+
+<h3>本书用的：learned absolute</h3>
+<p>最简单：开一个 <code>nn.Embedding(block_size, n_embd)</code> · 给每个 t ∈ [0, T) 学一个独立的向量 · 加到 token embedding 上：</p>
+<pre><code>pos = torch.arange(0, T, device=idx.device)   # (T,)
+x = self.tok_emb(idx) + self.pos_emb(pos)     # (B, T, C)</code></pre>
+<p>简单 · 直观 · GPT-2 / GPT-3 都用这套。缺点：<strong>不能外推</strong>到训练时没见过的位置（你训了 256 · 推理塞 512 直接挂）。</p>
+
+<h3>更现代的：RoPE / ALiBi（phase 3 详讲）</h3>
+<table>
+  <tr><th>方案</th><th>核心</th><th>哪些模型用</th></tr>
+  <tr><td>Learned Absolute</td><td>每个 t 一个独立向量</td><td>GPT-2 / GPT-3</td></tr>
+  <tr><td>Sinusoidal</td><td>正弦周期 · 不用学</td><td>原版 Transformer (2017)</td></tr>
+  <tr><td>RoPE</td><td>把 q/k 旋转一个角度 · 跟 t 挂钩</td><td>Llama / Qwen / Mistral</td></tr>
+  <tr><td>ALiBi</td><td>在 attention scores 上加距离惩罚</td><td>BLOOM · MPT</td></tr>
+</table>
+<p>本 phase 用 learned · 够直观。phase 3 用 RoPE · 那时候你需要长上下文了。</p>
+</section>
+
+<section id="block">
+<h2>7 · Pre-LN Block · GPT-2 后的标准结构</h2>
+<p>一个 transformer block = attention + MLP · 加 LayerNorm + 残差。<strong>LayerNorm 放哪里很关键</strong>。</p>
+
+<table>
+  <tr><th>位置</th><th>结构</th><th>谁用</th></tr>
+  <tr><td>Post-LN</td><td>x = LN(x + Attn(x))</td><td>原版 Transformer · 训深层不稳</td></tr>
+  <tr><td><strong>Pre-LN</strong></td><td>x = x + Attn(LN(x))</td><td>GPT-2 起所有人 · 深层稳定</td></tr>
+</table>
+
+<p>本书用 Pre-LN：</p>
+<pre><code>def forward(self, x):
+    x = x + self.attn(self.ln_1(x))   # 残差 + attention
+    x = x + self.mlp(self.ln_2(x))    # 残差 + MLP
+    return x</code></pre>
+
+<p>残差通道是 "<em>无障碍</em>" 的 (identity) · 梯度可以一路反传到底。LayerNorm 放在<strong>子模块前</strong> · 子模块的输出再加回主线。这样把 LayerNorm 的非线性挡在残差通道<em>之外</em> · 训练 100+ 层都不爆。</p>
+
+<h3>MLP 为什么放大 4×</h3>
+<p>nano/gpt.py 里 <code>self.c_fc = Linear(C, 4*C)</code> · 这是从原始 Transformer 论文 (2017) 起就定下的经验值。
+直觉：attention 负责<em>混合 token</em> · MLP 负责<em>非线性变换 hidden 维度</em>。给 MLP 一个 4× 的隐空间 · 让它有地方做高维特征加工。
+GPT / Llama / Qwen 全部 4× · 极少改。</p>
+
+<div class="cb">
+  <p class="cb-h">参数量分布</p>
+  <p>一个 GPT block 的参数 ≈ <strong>12 · C²</strong>（attention 4·C² · MLP 8·C²）。所以 MLP 占 <em>2/3</em> · attention 才 1/3。
+  这就是 MoE / FFN 量化的发力点 · 后面 phase 5 / 9 详讲。</p>
+</div>
+</section>
+
+<section id="tie">
+<h2>8 · Weight Tying · 一个被低估的 trick</h2>
+<p>nano/gpt.py 里有这一行：</p>
+<pre><code>self.lm_head.weight = self.tok_emb.weight</code></pre>
+
+<p>翻译成人话：<strong>输入的 token embedding 矩阵</strong> 和 <strong>输出的 lm_head 权重</strong> <em>共享同一份内存</em>。</p>
+
+<h3>为什么这么干</h3>
+<table>
+  <tr><th>好处</th><th>说明</th></tr>
+  <tr><td>省参数</td><td>少 vocab × n_embd 个参数 · GPT-2 small 直接省 38M（占总参 31%）</td></tr>
+  <tr><td>正则化</td><td>强迫 input / output 用同一套语义空间 · 缓解过拟合</td></tr>
+  <tr><td>实测有效</td><td>多个论文测 · ppl 略好 · 训练更稳</td></tr>
+</table>
+
+<div class="cb warn">
+  <p class="cb-h">注意</p>
+  <p>tying 之后 · 优化器只更新 <em>tok_emb.weight</em> · lm_head 跟着变。如果你给两者分别设了不同的 weight_decay · 可能会出 bug。
+  AdamW 默认行为是合并梯度 · 一般没事 · 但 debug 时要警惕。</p>
+</div>
+
+<p>验证 tying 生效的最快方法（看 tests/test_nano_gpt.py）：</p>
+<pre><code>assert model.tok_emb.weight.data_ptr() == model.lm_head.weight.data_ptr()</code></pre>
+</section>
+
+<section id="train">
+<h2>9 · Training Loop · AdamW + cosine + warmup</h2>
+
+<h3>AdamW vs SGD vs plain Adam</h3>
+<p>nano/train.py 用 <code>torch.optim.AdamW</code>。三大现代 LLM 用的全是这个 · 原因：</p>
+<table>
+  <tr><th>优化器</th><th>问题</th><th>判决</th></tr>
+  <tr><td>SGD + momentum</td><td>对学习率超敏感 · 不能 ill-conditioned · LLM 训练根本不收敛</td><td>×</td></tr>
+  <tr><td>plain Adam</td><td>weight_decay 实现错了 · 实际是 L2 而不是 decoupled decay</td><td>×</td></tr>
+  <tr><td><strong>AdamW</strong></td><td>weight_decay <em>独立</em>于梯度 · 跟学术理论一致</td><td>✓ 全行业用</td></tr>
+</table>
+
+<p>关键超参（nano/train.py 默认）：</p>
+<pre><code>lr        = 3e-4         # GPT-2 / nanoGPT 经验值
+betas     = (0.9, 0.95)  # β₂ 砍到 0.95 是 GPT-3 论文的经验 · 长序列稳一些
+weight_decay = 0.1       # GPT-3 / Llama 都用 0.1</code></pre>
+
+<h3>Learning rate schedule</h3>
+<p>三段式：<em>warmup → 巅峰 → cosine 衰减</em>。看 nano/train.py 的 <code>get_lr()</code>：</p>
+<pre><code>if it &lt; warmup_iters:
+    return lr * (it + 1) / warmup_iters    # 线性 warmup
+progress = (it - warmup_iters) / (max_iters - warmup_iters)
+coeff = 0.5 * (1 + cos(π * progress))      # cosine decay
+return min_lr + coeff * (lr - min_lr)</code></pre>
+
+<div class="cb math">
+  <p class="cb-h">为什么 warmup</p>
+  <p>训练前几十步 · Adam 的二阶动量 v 还没估稳 · 直接给大 lr 容易让某些参数飞掉。
+  线性 warmup 给 v 一个 "暖身" 时间 · 然后再上巅峰 lr。GPT-3 用 375M token 的 warmup · 你 50 步够了。</p>
+</div>
+
+<h3>Gradient clipping</h3>
+<p><code>torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)</code> · 全局梯度 norm 裁到 1.0。
+作用：偶尔出现 loss spike（比如训到一段噪声数据）时 · 防止一发回传炸掉参数。
+LLM 训练几乎所有家都裁 · 默认 1.0。</p>
+
+<h3>调试 checklist · 训不动怎么办</h3>
+<ol>
+  <li><strong>第一步：把 lr 砍 10 倍</strong>。多数 "loss 爆炸" 是 lr 太大。</li>
+  <li>看 first step loss 是不是 ≈ ln(vocab_size)。莎士比亚 65 个字符 · ln 65 ≈ 4.17 · 我们实测 4.20 ✓。如果第一步就 100+ · 模型初始化挂了。</li>
+  <li>看 grad_norm。如果全 0 · forward 链断了。如果 nan · 数值溢出 · 检查混合精度。</li>
+  <li>关 dropout · 关 augmentation · 看能不能在<em>一个 batch</em> 上 overfit。能 → 数据有问题 · 不能 → 模型有问题。</li>
+</ol>
+</section>
+
+<section id="sample">
+<h2>10 · Sampling · temperature / top-k 的几何直觉</h2>
+
+<p>训完只能算 ppl 没意思 · 我们要让它<em>说人话</em>。看 nano/gpt.py 的 <code>generate()</code>：</p>
+
+<pre><code>logits = logits[:, -1, :] / max(temperature, 1e-8)   # (B, vocab)
+if top_k is not None:
+    v, _ = torch.topk(logits, top_k)
+    logits[logits &lt; v[:, [-1]]] = -inf
+probs = F.softmax(logits, dim=-1)
+idx_next = torch.multinomial(probs, num_samples=1)</code></pre>
+
+<h3>Temperature</h3>
+<table>
+  <tr><th>τ</th><th>效果</th><th>用途</th></tr>
+  <tr><td>0.1</td><td>分布锐化 · 几乎贪心</td><td>事实问答 · 代码补全</td></tr>
+  <tr><td>0.7-0.9</td><td>合理多样</td><td>对话 · 创作</td></tr>
+  <tr><td>1.0</td><td>原 distribution</td><td>无修改</td></tr>
+  <tr><td>1.5+</td><td>变野 · 容易胡说</td><td>brainstorming</td></tr>
+</table>
+<p>τ 出现在 <code>logits / τ</code> 的位置 · τ 小 · logits 被放大 · softmax 输出更尖。τ → 0 时退化为 argmax（贪心采样）。</p>
+
+<h3>Top-k</h3>
+<p>把 logits 里 top-k 之外的全置 -∞ · 强制只在最高概率的 k 个 token 里采。
+作用：禁止模型走 "极小概率但灾难性" 的路径（典型例子：聊天聊到一半突然出现日文乱码）。</p>
+
+<p>常见组合：<code>(temperature=0.8, top_k=40)</code> 或 <code>(temperature=0.9, top_p=0.92)</code>（top-p 是 nucleus sampling · 这版没实现 · phase 4 加）。</p>
+
+<div class="cb note">
+  <p class="cb-h">几何视角</p>
+  <p>把 vocab 上的 distribution 想成一座山。temperature 控<em>山的尖锐度</em> · top-k 控<em>只在山顶 k 座峰里选</em>。
+  两个旋钮一起调 · 你就能做出从严肃问答到自由创作的所有风格。</p>
+</div>
+</section>
+
+<section id="mps">
+<h2>11 · macOS / MPS 适配的几个坑</h2>
+<p>本项目优先适配 Apple Silicon (M1/M2/M3) 的 MPS 后端 · 比 CPU 快 5-15 倍。但有几个老坑：</p>
+
+<table>
+  <tr><th>坑</th><th>表现</th><th>解</th></tr>
+  <tr><td>SDPA 在 MPS 早期不支持</td><td>"NotImplementedError"</td><td>升 PyTorch ≥ 2.2 · 本项目锁 2.12 ✓</td></tr>
+  <tr><td>fp16 不稳</td><td>loss → nan</td><td>用 fp32 或 bfloat16 (M2+)</td></tr>
+  <tr><td>大 batch OOM 没明显报错</td><td>程序卡住或 hang</td><td>从 batch_size=8 起涨 · 监控 Activity Monitor</td></tr>
+  <tr><td>多进程 dataloader 慢</td><td>num_workers&gt;0 反而变慢</td><td>MPS 下用 num_workers=0</td></tr>
+  <tr><td>checkpoint 用 pickle 报错</td><td>"weights_only" 警告</td><td>本项目 sample.py 显式传 <code>weights_only=False</code></td></tr>
+</table>
+
+<h3>device 选择代码</h3>
+<pre><code>def pick_device():
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    return torch.device("cpu")</code></pre>
+<p>nano/train.py 自动选。在我的 M2 air 上 · 50 步 (toy) ~4 秒 · 5000 步 (default) ~10 分钟。</p>
+</section>
+
+<section id="qs">
+<h2>30 题 · 自检</h2>
+<p>不偷看答案 · 能口述出来才算过。能讲清 25 题以上 · 就有面试 senior LLM 的硬底气了。</p>
+
+<ol class="q">
+  <li>语言模型的 chain rule 公式怎么写？</li>
+  <li>cross_entropy 跟 log-likelihood 是什么关系？</li>
+  <li>为什么 Q · K · V 用三个独立的 Linear · 而不是一个？</li>
+  <li>attention 的复杂度是多少？为什么是 O(T²·d)？</li>
+  <li>不除 √dₖ 会怎样？给出方差推导。</li>
+  <li>multi-head 跟单 head 同等参数量吗？为什么要切？</li>
+  <li>head_dim 一般取多少？为什么是这个范围？</li>
+  <li>causal mask 的形状画一下（T=4）。</li>
+  <li>不加 mask 训练会发生什么？</li>
+  <li>position embedding 不加 · attention 会怎么样？</li>
+  <li>learned absolute vs RoPE · 各有什么优缺点？</li>
+  <li>Pre-LN 跟 Post-LN 的区别是什么？为什么现代用 Pre-LN？</li>
+  <li>MLP 为什么放大 4×？改 8× 会怎样？</li>
+  <li>weight tying 省了多少参数？为什么 ppl 还能略好？</li>
+  <li>AdamW 跟 plain Adam 的区别在哪？</li>
+  <li>β₂ 为什么从 0.999 降到 0.95？</li>
+  <li>lr warmup 在解决什么问题？</li>
+  <li>cosine schedule vs linear decay · 一般用哪个？</li>
+  <li>grad clipping 防什么？默认裁到多少？</li>
+  <li>第一步 loss 应该是多少？怎么用它判断初始化对不对？</li>
+  <li>训练时 input 和 target 的关系是什么？</li>
+  <li>为什么用随机抽窗口而不是顺序遍历？</li>
+  <li>temperature → 0 等价于什么采样策略？</li>
+  <li>top-k 跟 top-p (nucleus) 的区别？</li>
+  <li>weight_only=False 的安全风险是什么？</li>
+  <li>generate() 里为什么 idx 要截断到 block_size？</li>
+  <li>训练 vs 推理时 dropout 行为有什么不同？</li>
+  <li>SDPA 是什么的缩写？为什么用它能加速？</li>
+  <li>MPS 下用 fp16 会怎样？应该用什么精度？</li>
+  <li>模型参数量公式 ≈ ? · 已知 n_layer=L · n_embd=C · vocab=V。</li>
+</ol>
+
+<div class="cb note">
+  <p class="cb-h">参考公式（Q30）</p>
+  <p>每个 block ≈ 12 C² · 共 L 层 · embedding 加输入 + 位置 = (V + T_max) · C · 但 weight tying 后 lm_head 不再独立。
+  总数 ≈ <strong>12 L C² + (V + T_max) C</strong>。代入 nano 默认 (L=6, C=384, V=65, T=256) ≈ 11.5M ✓ 实测 ~10.7M。</p>
+</div>
+</section>
+
+<section id="gloss">
+<h2>60 词术语表</h2>
+<p>面试 / 读论文 / 看源码会反复见。能准确说出每个的<em>一句话定义</em> · 你已经超过 80% 的 ML 工程师。</p>
+
+<dl class="gloss">
+<div class="row"><dt>autoregressive</dt> <dd>用过去预测下一个的建模方式</dd></div>
+<div class="row"><dt>token</dt> <dd>模型处理的最小单位（字符 / 子词 / 词）</dd></div>
+<div class="row"><dt>vocab_size</dt> <dd>词表大小 · 决定 embedding 矩阵和 lm_head 维度</dd></div>
+<div class="row"><dt>block_size</dt> <dd>模型一次能看的最大 token 数 · 也叫 context length</dd></div>
+<div class="row"><dt>n_embd / d_model</dt> <dd>hidden 维度 · 整个 transformer 的 "宽度"</dd></div>
+<div class="row"><dt>n_layer</dt> <dd>堆叠的 transformer block 数 · 模型的 "深度"</dd></div>
+<div class="row"><dt>n_head</dt> <dd>multi-head attention 的并行 head 数</dd></div>
+<div class="row"><dt>head_dim</dt> <dd>每个 head 的 hidden 维度 = n_embd / n_head</dd></div>
+<div class="row"><dt>logits</dt> <dd>softmax 之前的原始分数 · 形状 (B, T, vocab)</dd></div>
+<div class="row"><dt>softmax</dt> <dd>把 logits 映射到 [0,1] 概率 · 总和为 1</dd></div>
+<div class="row"><dt>cross-entropy</dt> <dd>分类任务的标准 loss · 对应 -log likelihood</dd></div>
+<div class="row"><dt>perplexity / ppl</dt> <dd>exp(loss) · 越小越好 · 直观表示 "平均不确定多少种"</dd></div>
+<div class="row"><dt>Q / K / V</dt> <dd>attention 的查询 / 键 / 值三个角色</dd></div>
+<div class="row"><dt>SDPA</dt> <dd>Scaled Dot-Product Attention · PyTorch 内置的 fused kernel</dd></div>
+<div class="row"><dt>FlashAttention</dt> <dd>减少显存读写的 attention kernel · 比 SDPA 更快（phase 8）</dd></div>
+<div class="row"><dt>causal mask</dt> <dd>下三角 mask · 强制不偷看未来</dd></div>
+<div class="row"><dt>position embedding</dt> <dd>给 token 注入位置信号</dd></div>
+<div class="row"><dt>RoPE</dt> <dd>Rotary Position Embedding · 现代主流位置编码</dd></div>
+<div class="row"><dt>ALiBi</dt> <dd>线性偏置位置编码 · BLOOM / MPT 用</dd></div>
+<div class="row"><dt>LayerNorm</dt> <dd>对单样本所有特征做归一化</dd></div>
+<div class="row"><dt>RMSNorm</dt> <dd>LayerNorm 的简化版 · Llama / Mistral 用</dd></div>
+<div class="row"><dt>Pre-LN</dt> <dd>LayerNorm 放残差里面 · 训深层稳</dd></div>
+<div class="row"><dt>residual</dt> <dd>x = x + f(x) · 让深网络可训</dd></div>
+<div class="row"><dt>MLP / FFN</dt> <dd>每个 block 的两层 feed-forward</dd></div>
+<div class="row"><dt>GELU</dt> <dd>平滑版 ReLU · GPT 系列用</dd></div>
+<div class="row"><dt>SwiGLU</dt> <dd>门控版激活 · Llama 用 · 比 GELU 略好</dd></div>
+<div class="row"><dt>weight tying</dt> <dd>tok_emb 和 lm_head 共享权重</dd></div>
+<div class="row"><dt>tokenizer</dt> <dd>把字符串映射到 id 序列的工具（phase 2）</dd></div>
+<div class="row"><dt>BPE</dt> <dd>Byte-Pair Encoding · GPT 系列的 tokenizer 算法</dd></div>
+<div class="row"><dt>SentencePiece</dt> <dd>Google 出的 tokenizer 库 · Llama 用</dd></div>
+<div class="row"><dt>AdamW</dt> <dd>Adam + decoupled weight decay · 现代 LLM 默认</dd></div>
+<div class="row"><dt>weight_decay</dt> <dd>L2 正则的现代实现 · 防过拟合</dd></div>
+<div class="row"><dt>learning rate</dt> <dd>每步参数更新的步长</dd></div>
+<div class="row"><dt>warmup</dt> <dd>训练前 N 步 lr 从 0 线性涨到 peak</dd></div>
+<div class="row"><dt>cosine schedule</dt> <dd>warmup 后 lr 按余弦衰减</dd></div>
+<div class="row"><dt>grad clipping</dt> <dd>限制梯度 norm 上限 · 防 spike</dd></div>
+<div class="row"><dt>checkpoint</dt> <dd>保存的模型 + 优化器状态</dd></div>
+<div class="row"><dt>seed</dt> <dd>随机数种子 · 让结果可复现</dd></div>
+<div class="row"><dt>batch_size</dt> <dd>一次 forward 的样本数</dd></div>
+<div class="row"><dt>eval interval</dt> <dd>每多少步算一次 val loss</dd></div>
+<div class="row"><dt>greedy decoding</dt> <dd>每步取 argmax · 等价 temperature → 0</dd></div>
+<div class="row"><dt>temperature</dt> <dd>采样时 logits 的 scale · 控随机性</dd></div>
+<div class="row"><dt>top-k sampling</dt> <dd>只在 top-k logits 里采样</dd></div>
+<div class="row"><dt>top-p / nucleus</dt> <dd>在累计概率达 p 的最小集合里采</dd></div>
+<div class="row"><dt>beam search</dt> <dd>同时维护 b 条假设的搜索 · LLM 现在很少用</dd></div>
+<div class="row"><dt>KV cache</dt> <dd>推理时缓存 K / V · 避免重算（phase 8）</dd></div>
+<div class="row"><dt>fp16 / bfloat16</dt> <dd>16 位浮点 · 省显存加训练</dd></div>
+<div class="row"><dt>fp32</dt> <dd>32 位浮点 · 默认精度 · MPS 推荐</dd></div>
+<div class="row"><dt>mixed precision</dt> <dd>fp32 主参 + fp16 计算 · 主流训练方案</dd></div>
+<div class="row"><dt>MPS</dt> <dd>Apple Silicon 的 GPU 后端</dd></div>
+<div class="row"><dt>CUDA</dt> <dd>NVIDIA GPU 后端</dd></div>
+<div class="row"><dt>OOM</dt> <dd>Out Of Memory · 显存不够</dd></div>
+<div class="row"><dt>VRAM</dt> <dd>显存大小 · 决定能训多大模型</dd></div>
+<div class="row"><dt>nanoGPT</dt> <dd>Karpathy 的极简实现 · 本书源头</dd></div>
+<div class="row"><dt>tiny shakespeare</dt> <dd>~1MB 莎士比亚文本 · char-level 测试集</dd></div>
+<div class="row"><dt>overfit</dt> <dd>模型记住训练集 · val loss 反弹</dd></div>
+<div class="row"><dt>scaling law</dt> <dd>模型 / 数据 / 算力 vs loss 的幂律（phase 3）</dd></div>
+<div class="row"><dt>SFT</dt> <dd>Supervised Fine-Tuning · 用对话数据精调（phase 4）</dd></div>
+<div class="row"><dt>LoRA</dt> <dd>低秩适配 · 单卡 fine-tune 7B（phase 5）</dd></div>
+<div class="row"><dt>DPO</dt> <dd>Direct Preference Optimization · 用偏好数据对齐（phase 6）</dd></div>
+</dl>
+</section>
+
+<hr class="dim">
+
+<section style="border-bottom:0;">
+<h2>下一本</h2>
+<p><a href="./index.html">← 回 phase 总览</a> · 接下来是 <strong>Book 02 · Tokenizer</strong> · 我们把 char-level 升级到 BPE · 学 GPT-2 / GPT-4 / Llama 的 tokenizer 怎么训。</p>
+
+<div class="cb">
+  <p class="cb-h">commit 这一本对应的代码</p>
+  <p>
+    <code>nano/gpt.py</code> · <code>nano/data.py</code> · <code>nano/train.py</code> · <code>nano/sample.py</code> · <code>tests/test_nano_gpt.py</code><br>
+    跑通命令：<code>make download-tiny &amp;&amp; make nano-train</code> · 然后 <code>uv run python -m nano.sample</code>
+  </p>
+</div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="container">
+    <p>taotao-llm · Book 01 · Phase 1 · MIT</p>
+    <p>
+      <a href="./index.html">总览</a> ·
+      <a href="https://github.com/doraemonlyz-jpg/taotao-llm">GitHub</a> ·
+      <a href="https://github.com/doraemonlyz-jpg/taotao-agent">姊妹项目 taotao-agent</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

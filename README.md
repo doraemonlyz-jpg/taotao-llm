@@ -36,7 +36,7 @@
 | Phase | 主题 | 时长 | 你将能做到 | 书 |
 |---|---|---|---|---|
 | **0** | 心智地图 · attention / token / loss / autoregressive 直觉 | 1 周 | 看懂任何 LLM 论文 abstract | `docs/00-mental-model.html` *(planned)* |
-| **1** | nanoGPT 手搓 · tiny shakespeare · CPU/MPS 跑通 | 2 周 | 自己写出能"说人话"的 toy GPT | `docs/01-nanogpt.html` |
+| **1** ✅ | nanoGPT 手搓 · tiny shakespeare · CPU/MPS 跑通 | 2 周 | 自己写出能"说人话"的 toy GPT | [`docs/01-nanogpt.html`](./docs/01-nanogpt.html) |
 | **2** | Tokenizer · char → BPE → SentencePiece · 自训 vocab | 1 周 | 知道为啥中文 tokenizer 那么坑 | `docs/02-tokenizer.html` |
 | **3** | Pretrain · FineWeb 子集 · 100M-1B params · scaling law · LR schedule | 2-3 周 | 把 nanoGPT 升级成"能用"的 base 模型 | `docs/03-pretrain.html` |
 | **4** | SFT · chat template · packing · masking · Alpaca/Dolly | 2 周 | base → instruction follow | `docs/04-sft.html` |
@@ -47,7 +47,7 @@
 | **9** | 量化 + 部署 · AWQ / GPTQ / GGUF · vLLM / Ollama / llama.cpp | 1 周 | 训好的模型推到 chat UI / API | `docs/09-deploy.html` |
 
 > 总计 **3-4 个月全职** · 学完你就有一个 senior LLM engineer 的核心 muscle memory。
-> 当前 phase: **0 · bootstrap** · 仓库刚建好 · 路线已定 · 准备开学。
+> 当前 phase: **1 · nanoGPT shipped** ✅ · `make download-tiny && make nano-train` 一条命令就能跑 · 配套 [Book 01](./docs/01-nanogpt.html) 已发车。
 
 ---
 
