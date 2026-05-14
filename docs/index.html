@@ -53,7 +53,7 @@ code { font-family: "JetBrains Mono", monospace; font-size: .85em; background: v
 <nav class="nav">
   <div class="container nav-row">
     <span class="nav-brand"><span class="dot">◆</span> taotao-llm</span>
-    <span style="font-family: 'Outfit', sans-serif; font-size: .85rem; color: var(--ink-mute);">Phase 1 · nanoGPT shipped</span>
+    <span style="font-family: 'Outfit', sans-serif; font-size: .85rem; color: var(--ink-mute);">Phase 2 · Tokenizer shipped</span>
   </div>
 </nav>
 
@@ -78,7 +78,7 @@ code { font-family: "JetBrains Mono", monospace; font-size: .85em; background: v
     <tbody>
       <tr><td class="phase-num">0</td><td>心智地图 · attention / token / loss / autoregressive 直觉</td><td>1 周</td><td>书 · README 路线图</td><td><span class="phase-status done">done</span></td></tr>
       <tr><td class="phase-num">1</td><td><a href="./01-nanogpt.html">nanoGPT · 200 行 PyTorch · tiny shakespeare</a></td><td>2 周</td><td><code>nano/gpt.py</code> · <code>nano/train.py</code> · <code>nano/sample.py</code> · <a href="./01-nanogpt.html">Book 01</a></td><td><span class="phase-status done">done</span></td></tr>
-      <tr><td class="phase-num">2</td><td>Tokenizer · char → BPE → SentencePiece · 自训 vocab</td><td>1 周</td><td><code>nano/tokenize.py</code> · <code>industrial/tokenizer/</code> · 书</td><td><span class="phase-status todo">pending</span></td></tr>
+      <tr><td class="phase-num">2</td><td><a href="./02-tokenizer.html">Tokenizer · char → BPE → byte-level BPE · 中文为什么吃亏</a></td><td>1 周</td><td><code>nano/bpe.py</code> · <code>industrial/tokenizer/</code> · <a href="./02-tokenizer.html">Book 02</a></td><td><span class="phase-status done">done</span></td></tr>
       <tr><td class="phase-num">3</td><td>Pretrain · FineWeb 子集 · 100M-1B params · scaling law</td><td>2-3 周</td><td><code>industrial/pretrain/</code> · 书</td><td><span class="phase-status todo">pending</span></td></tr>
       <tr><td class="phase-num">4</td><td>SFT · chat template · packing · masking</td><td>2 周</td><td><code>nano/sft.py</code> · <code>industrial/sft/</code> · 书</td><td><span class="phase-status todo">pending</span></td></tr>
       <tr><td class="phase-num">5</td><td>LoRA / QLoRA · peft · 单卡 fine-tune 7B</td><td>1 周</td><td><code>industrial/lora/</code> · 书</td><td><span class="phase-status todo">pending</span></td></tr>

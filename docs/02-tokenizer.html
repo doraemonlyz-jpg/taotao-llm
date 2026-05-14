@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book 02 · Tokenizer · 从 char 到 byte-level BPE · 中文为什么吃亏</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230f1d35'/%3E%3Cpath d='M32 12 L 48 30 L 32 52 L 16 30 Z' fill='%23f4c95a' stroke='%23fff5d8' stroke-width='1.2' stroke-linejoin='round'/%3E%3Ccircle cx='32' cy='30' r='4' fill='%230f1d35'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Lora:wght@400;500;600&family=Outfit:wght@500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
+<style>
+:root {
+  --paper: #0f1d35; --paper-2: #162844; --paper-card: #1c3155;
+  --ink: #f5ecd2; --ink-soft: #c8be9b; --ink-mute: #7e8aa6;
+  --rule: #2c4570; --rule-soft: #1f3458;
+  --gold: #f4c95a; --rust: #e08e6f; --leaf: #8eb58f; --sky: #6a96bc; --plum: #c0a3d1;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Lora", Georgia, serif; font-size: 17px; line-height: 1.75;
+  background: radial-gradient(ellipse at top left, rgba(140,180,220,.10), transparent 50%), var(--paper);
+  color: var(--ink); }
+.container { max-width: 880px; margin: 0 auto; padding: 0 2rem; }
+.nav { padding: 1.4rem 0; border-bottom: 1px solid var(--rule); }
+.nav-row { display: flex; justify-content: space-between; align-items: center; }
+.nav-brand { font-family: "Fraunces", serif; font-style: italic; font-weight: 600; font-size: 1.15rem; }
+.nav-brand .dot { color: var(--gold); }
+.nav-meta { font-family: "Outfit", sans-serif; font-size: .85rem; color: var(--ink-mute); }
+.hero { padding: 3.6rem 0 2.4rem; border-bottom: 1px solid var(--ink); }
+.eyebrow { font-family: "Outfit", sans-serif; font-size: .78rem; letter-spacing: .08em; color: var(--rust); text-transform: uppercase; font-weight: 600; margin-bottom: 1.2rem; }
+h1 { font-family: "Fraunces", serif; font-weight: 500; font-size: clamp(2rem, 4.4vw, 3rem); line-height: 1.12; margin: 0 0 1.2rem; letter-spacing: -0.02em; }
+h1 em { color: var(--rust); font-style: italic; }
+.lede { color: var(--ink-soft); font-size: 1.08rem; max-width: 36em; }
+section { padding: 2.6rem 0; border-bottom: 1px dashed var(--rule); }
+h2 { font-family: "Fraunces", serif; font-weight: 500; font-size: 1.55rem; margin: 0 0 1.2rem; color: var(--ink); letter-spacing: -.01em; }
+h3 { font-family: "Outfit", sans-serif; font-weight: 600; font-size: 1.05rem; margin: 1.6rem 0 .6rem; color: var(--gold); letter-spacing: .01em; }
+p { margin: 0 0 .9rem; }
+strong { color: var(--ink); }
+em { color: var(--rust); font-style: italic; }
+code { font-family: "JetBrains Mono", monospace; font-size: .86em; background: var(--paper-2); padding: .08rem .35rem; border-radius: 4px; color: var(--rust); border: 1px solid var(--rule-soft); }
+pre { background: #0a1628; padding: 1rem 1.2rem; border-radius: 10px; border: 1px solid var(--rule); border-left: 4px solid var(--sky); overflow-x: auto; margin: 1.2rem 0; }
+pre code { background: transparent; border: 0; padding: 0; color: #e8e3d4; font-size: .85rem; }
+.cb { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--gold); border-radius: 8px; padding: 1rem 1.2rem; margin: 1.2rem 0; }
+.cb-h { font-family: "Outfit", sans-serif; font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: .35rem; }
+.cb.warn { border-left-color: var(--rust); }
+.cb.note { border-left-color: var(--leaf); }
+.cb.math { border-left-color: var(--plum); }
+table { width: 100%; border-collapse: collapse; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; font-size: .94rem; margin: 1.2rem 0; }
+th, td { padding: .7rem .9rem; text-align: left; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+th { background: rgba(143,202,160,.1); color: var(--ink); font-family: "Outfit", sans-serif; font-size: .76rem; letter-spacing: .04em; text-transform: uppercase; }
+tr:last-child td { border-bottom: 0; }
+a { color: var(--rust); border-bottom: 1px solid rgba(244,201,90,.4); text-decoration: none; }
+a:hover { background: rgba(244,201,90,.08); }
+.toc { background: var(--paper-card); border: 1px solid var(--rule); border-radius: 10px; padding: 1.2rem 1.6rem; margin: 1.6rem 0; }
+.toc h3 { margin: 0 0 .6rem; font-family: "Outfit", sans-serif; font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-mute); }
+.toc ol { margin: 0; padding-left: 1.4rem; color: var(--ink-soft); }
+.toc a { color: var(--ink-soft); border-bottom: 0; }
+.toc a:hover { color: var(--gold); background: transparent; }
+ol.q { padding-left: 1.4rem; counter-reset: q; list-style: none; }
+ol.q > li { margin: .8rem 0 .8rem 0; padding-left: 2.4rem; position: relative; }
+ol.q > li::before { counter-increment: q; content: "Q" counter(q); position: absolute; left: 0; top: .05rem; font-family: "JetBrains Mono", monospace; font-size: .8rem; color: var(--gold); font-weight: 600; }
+.gloss { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem 1.4rem; font-size: .92rem; }
+.gloss dt { font-family: "Outfit", sans-serif; font-weight: 600; color: var(--gold); display: inline; }
+.gloss dd { display: inline; margin: 0 0 .35rem 0; color: var(--ink-soft); }
+.gloss .row { padding: .25rem 0; border-bottom: 1px dashed var(--rule-soft); }
+.foot { padding: 3rem 0; text-align: center; color: var(--ink-mute); font-family: "Outfit", sans-serif; font-size: .88rem; }
+hr.dim { border: 0; border-top: 1px dashed var(--rule); margin: 2.4rem 0; }
+.kbd { font-family: "JetBrains Mono", monospace; font-size: .8em; background: var(--paper-2); border: 1px solid var(--rule); border-radius: 4px; padding: .05rem .4rem; color: var(--leaf); }
+@media (max-width: 640px) { .gloss { grid-template-columns: 1fr; } .container { padding: 0 1.2rem; } }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-row">
+    <span class="nav-brand"><span class="dot">◆</span> taotao-llm</span>
+    <span class="nav-meta">Phase 2 · Book 02</span>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="eyebrow">Phase 2 · 一节课读懂为什么 GPT-4 中文比英文贵 2 倍</div>
+    <h1>Book 02 · <em>Tokenizer</em> · 从 char 到 byte-level BPE</h1>
+    <p class="lede">
+      LLM 不直接看字符串 · 它看 token id 序列。tokenizer 决定<strong>词表大小、序列长度、推理 token 计费、中文表现</strong>。
+      这一本你将自己写一个 byte-level BPE · 跑出 GPT-2 同款配方 · 并搞清为什么 Llama-2 中文吃亏 · 而 Qwen 用了 15 万词表。
+    </p>
+  </div>
+</header>
+
+<main class="container">
+
+<section>
+<div class="toc">
+  <h3>本书路线</h3>
+  <ol>
+    <li><a href="#why">1 · Tokenizer 在做什么 · 为什么不能跳过</a></li>
+    <li><a href="#level">2 · 五种粒度 · char / word / subword / byte / pixel</a></li>
+    <li><a href="#bpe">3 · BPE 算法 · 用 30 行 Python 自己写一遍</a></li>
+    <li><a href="#bytelevel">4 · Byte-level BPE · 永远没有 UNK</a></li>
+    <li><a href="#pretok">5 · Pre-tokenization · GPT-2 那条出名的 regex</a></li>
+    <li><a href="#wordpiece">6 · WordPiece / Unigram · BPE 的两个亲戚</a></li>
+    <li><a href="#cn">7 · 中文为什么吃亏 · token rate 实测</a></li>
+    <li><a href="#special">8 · 特殊 token · BOS / EOS / chat template</a></li>
+    <li><a href="#vocab">9 · vocab_size 怎么选 · 小模型 vs 大模型</a></li>
+    <li><a href="#integrate">10 · Tokenizer 怎么接进 phase 1 nanoGPT</a></li>
+    <li><a href="#qs">30 题 · 自检</a></li>
+    <li><a href="#gloss">60 词术语表</a></li>
+  </ol>
+</div>
+</section>
+
+<section id="why">
+<h2>1 · Tokenizer 在做什么 · 为什么不能跳过</h2>
+
+<p>所有现代 LLM 都做这两步映射：</p>
+
+<pre><code>"Hello, 世界! 🌏"
+        ↓ tokenizer.encode
+[15496, 11, 220, 161, 116, 244, 30298, 0, 220, 8582, 234, 235]
+        ↓ model.forward · embedding + transformer
+[15496 → "Hello"   prob 23%
+            "world" prob 19%
+            ...]
+        ↓ tokenizer.decode
+"Hello, 世界! 🌏 world..."</code></pre>
+
+<p>tokenizer <strong>不是模型的一部分</strong> · 它是模型外面的一层确定性查表。但它的设计直接决定四件大事：</p>
+
+<table>
+  <tr><th>设计选择</th><th>影响</th></tr>
+  <tr><td>vocab_size</td><td>embedding 矩阵 = vocab × n_embd · 直接占参数 / 显存</td></tr>
+  <tr><td>分词粒度</td><td>同一句话的 token 数 → 训练 / 推理 cost · 上下文够不够用</td></tr>
+  <tr><td>byte-level vs not</td><td>要不要处理 UNK · 中日韩泰阿等语言能不能不掉精度</td></tr>
+  <tr><td>special tokens</td><td>chat template · function call · system prompt 怎么标</td></tr>
+</table>
+
+<div class="cb warn">
+  <p class="cb-h">为什么不能跳过</p>
+  <p>面试官常问 "为什么 GPT-4 中文比英文贵"。如果你答 "因为中文字符多" · 你已经答错了 · 因为 GPT-4 用的是 byte-level · 一个英文字符 = 1 byte = 0.25 token (约) · 一个中文字符 = 3 byte ≈ 1-2 token。<strong>是 byte 数差异</strong>。</p>
+</div>
+</section>
+
+<section id="level">
+<h2>2 · 五种粒度 · char / word / subword / byte / pixel</h2>
+
+<table>
+  <tr><th>粒度</th><th>vocab</th><th>序列长</th><th>OOV</th><th>例</th></tr>
+  <tr><td>character</td><td>~100-10k</td><td>很长</td><td>稀有 unicode</td><td>本项目 phase 1 nanoGPT</td></tr>
+  <tr><td>word</td><td>50k-500k+</td><td>很短</td><td>新词 / typo</td><td>word2vec · GloVe</td></tr>
+  <tr><td><strong>subword (BPE/WP/Uni)</strong></td><td>10k-100k</td><td>中</td><td>取决于实现</td><td><strong>主流 LLM</strong></td></tr>
+  <tr><td><strong>byte-level</strong></td><td>≥256</td><td>偏长</td><td><strong>从不</strong></td><td>GPT-2/3/4 · Llama-3</td></tr>
+  <tr><td>pixel / image patch</td><td>—</td><td>—</td><td>—</td><td>多模态 · ViT 路线</td></tr>
+</table>
+
+<h3>为什么 char 不够好</h3>
+<p>phase 1 我们用了 65 字符的 char-level · loss 能从 4.2 降到 1.5 · 但 vocab 太小有几个根本缺陷：</p>
+<ul>
+  <li><strong>序列长 4-5 倍</strong>：同样的内容 · char 序列 ≈ 5× BPE 序列 · 训练慢 · context 浪费</li>
+  <li><strong>每个 token 信息量太低</strong>：一个 token 只承载 1 字节信息 · attention 不得不学很长距离的依赖才能拼出一个词</li>
+  <li><strong>多语言外推差</strong>：中日韩字符不在 ASCII 65 内 · 完全编不动</li>
+</ul>
+
+<h3>为什么 word 也不行</h3>
+<p>"unhappy" / "happiness" / "happily" 在 word-level 是<strong>三个完全独立的 token</strong> · 模型学不到它们共享 "happy" 这个语义根。
+而且新词 / 拼写错 / 专有名词必然 OOV · 退化成 <code>&lt;UNK&gt;</code> · 信息损失。</p>
+
+<h3>subword 是甜点</h3>
+<p>"unhappy" → ["un", "happy"] · "happiness" → ["happi", "ness"] · 共享了 "happy" 词根。
+vocab 控制在 30k-100k 量级 · 序列长度可控 · 不用 UNK · 这就是 BPE / WordPiece / SentencePiece 的共同 motivation。</p>
+</section>
+
+<section id="bpe">
+<h2>3 · BPE 算法 · 用 30 行 Python 自己写一遍</h2>
+
+<p>BPE = <strong>Byte-Pair Encoding</strong> · 1994 年的数据压缩算法 · 2016 年 Sennrich 把它搬到 NMT · 然后 GPT-2 把它做成 LLM 默认。</p>
+
+<div class="cb math">
+  <p class="cb-h">算法</p>
+  <p>初始化：vocab = 所有 base 单元（byte 或 char）<br>
+     循环 N 次：<br>
+     &nbsp;&nbsp;1. 统计当前 token 序列里所有相邻 pair 的频次<br>
+     &nbsp;&nbsp;2. 取频次最高的 pair (a, b) · 给它一个新 id<br>
+     &nbsp;&nbsp;3. 把序列里所有 (a, b) 替换为新 id<br>
+     输出：merges 列表（决定 encode 顺序）+ vocab 表</p>
+</div>
+
+<h3>看 nano/bpe.py 的核心 30 行</h3>
+<pre><code>def train(text: str, vocab_size: int) -&gt; "BPE":
+    ids = list(text.encode("utf-8"))         # base = 256 字节
+    merges = {}
+    vocab = {i: bytes([i]) for i in range(256)}
+    for i in range(vocab_size - 256):
+        counts = Counter(zip(ids, ids[1:]))  # 数 pair
+        pair, _ = max(counts.items(), key=lambda kv: kv[1])
+        new_id = 256 + i
+        ids = _merge(ids, pair, new_id)      # 序列里替换
+        merges[pair] = new_id
+        vocab[new_id] = vocab[pair[0]] + vocab[pair[1]]
+    return BPE(merges=merges, vocab=vocab)</code></pre>
+
+<p>就这。我们的 nano/bpe.py 完整版 ≈ 130 行 · 多出来的是 encode / decode / save / load + 注释。</p>
+
+<h3>encode 时为什么要用 "id 最小的 merge 优先"</h3>
+<p>训练时合并顺序 = 频次顺序。encode 时你拿到一段新文本 · 它里面可能有多个可合并的 pair · 此时按训练顺序（id 升序）从最早学到的 merge 开始套 · 才能跟训练时的切分保持一致。
+看 nano/bpe.py 的 <code>encode()</code>：</p>
+
+<pre><code>while True:
+    counts = _get_pair_counts(ids)
+    applicable = [(self.merges[p], p) for p in counts if p in self.merges]
+    if not applicable: break
+    _, pair = min(applicable, key=lambda x: x[0])  # id 最小 = 学得最早
+    ids = _merge(ids, pair, self.merges[pair])</code></pre>
+
+<div class="cb warn">
+  <p class="cb-h">坑</p>
+  <p>朴素 encode 是 O(N²) · 对长文本会慢。HF 的 Rust 实现用 trie / 双向链表把它降到 O(N log N) · 实测我们 nano 1MB 训了 34 秒 · HF 0.2 秒 · 170× 差距。教学版重<em>看懂</em> · 工业版重<em>跑得动</em>。</p>
+</div>
+</section>
+
+<section id="bytelevel">
+<h2>4 · Byte-level BPE · 永远没有 UNK</h2>
+
+<p>朴素 BPE 在<em>字符</em>上做。如果训练语料里没出现过 "𓀀" · 推理时遇到它就只能 UNK。</p>
+
+<p><strong>Byte-level BPE</strong> 直接在 UTF-8 byte 上做。任何 Unicode 字符都能拆成 1-4 个 byte · base vocab 256 个 byte 永远覆盖。<em>推理时不可能 OOV</em>。</p>
+
+<h3>UTF-8 速记</h3>
+<table>
+  <tr><th>字符范围</th><th>byte 数</th><th>例</th></tr>
+  <tr><td>U+0000 – U+007F (ASCII)</td><td>1</td><td>"a" → 0x61</td></tr>
+  <tr><td>U+0080 – U+07FF</td><td>2</td><td>"é" → 0xC3 0xA9</td></tr>
+  <tr><td>U+0800 – U+FFFF (大部分中日韩)</td><td>3</td><td>"中" → 0xE4 0xB8 0xAD</td></tr>
+  <tr><td>U+10000 – U+10FFFF (emoji / 古文字)</td><td>4</td><td>"🌏" → 0xF0 0x9F 0x8C 0x8F</td></tr>
+</table>
+
+<p>所以一个中文字符 = 3 byte = 起始 3 token（在词表把它合并掉之前）。这就是<strong>中文吃亏的根本原因</strong>（详见第 7 节）。</p>
+
+<h3>验证 byte-level 不会 UNK</h3>
+<p>看 tests/test_bpe.py 的 <code>test_special_chars_no_unk</code>：</p>
+<pre><code>bpe = BPE.train(CORPUS_MIX, vocab_size=320)
+weird = "\x00\x01\x02 ZWJ‍ NBSP\xa0 emoji 👨‍💻 中"
+assert bpe.decode(bpe.encode(weird)) == weird   # ✓ 完美 roundtrip</code></pre>
+</section>
+
+<section id="pretok">
+<h2>5 · Pre-tokenization · GPT-2 那条出名的 regex</h2>
+
+<p>纯 byte-level BPE 有一个尴尬问题：合并是<em>跨词</em>的。</p>
+
+<pre><code># 不预切的 BPE 会学到的离谱合并
+("e",  " ") → "e "      # "the" 末尾 + 下个空格 = 一个 token
+(" ", "t")  → " t"      # 空格 + "t" 开头 = 一个 token</code></pre>
+
+<p>结果：<strong>"the" 出现位置不同时被切成不同 id</strong> · 模型要重学每个上下文。
+解决：先用 regex 把文本切成<em>有意义的边界单位</em>（word-ish）· 再在每个单位内做 BPE。</p>
+
+<h3>GPT-2 的 regex（industrial/tokenizer/train_hf.py 同款）</h3>
+<pre><code>'(?i:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?+\p{L}+|\p{N}{1,3}|
+ ?[^\s\p{L}\p{N}]++[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s+</code></pre>
+
+<p>看着像天书 · 拆开就是六条规则：</p>
+<ol>
+  <li><code>'s 've 'll 'd 'm 't 're</code> → 单独切（英文常见缩写）</li>
+  <li><code>?[非字母非数字]?字母+</code> → 一个英文词（前面可带一个空格 / 标点）</li>
+  <li><code>数字{1-3}</code> → 数字串切成最多 3 位</li>
+  <li><code>?[符号]+</code> → 连续符号</li>
+  <li><code>\s*[\r\n]</code> → 空白 + 换行</li>
+  <li><code>\s+</code> → 任何剩下的空白</li>
+</ol>
+
+<p>这套切完后 · " the" 永远是一个 unit · " The" 又是一个 unit。BPE 在 unit 内学合并 · 跨 unit 不会合 · 解决了 token 不一致问题。</p>
+
+<div class="cb">
+  <p class="cb-h">为什么数字限 3 位</p>
+  <p>"12345" 跟 "12346" 的语义几乎一样 · 但作为整 token 会爆炸性扩词表。切成 "123" + "45" 让模型学数字组合规律 · vocab 才控制得住。GPT-4 改成 1 位 · Llama-3 也是 1 位。</p>
+</div>
+</section>
+
+<section id="wordpiece">
+<h2>6 · WordPiece / Unigram · BPE 的两个亲戚</h2>
+
+<table>
+  <tr><th>算法</th><th>合并准则</th><th>谁在用</th><th>特点</th></tr>
+  <tr><td><strong>BPE</strong></td><td>挑频次最高 pair</td><td>GPT-2/3/4 · Llama · Mistral · Qwen</td><td>简单 · 主流</td></tr>
+  <tr><td>WordPiece</td><td>挑能让 likelihood 最大化的 pair</td><td>BERT · DistilBERT · Electra</td><td>BPE 的一个变种 · 数学更优</td></tr>
+  <tr><td>Unigram</td><td>反向：先大词表 · 不断剪掉对 likelihood 贡献最小的 token</td><td>SentencePiece (T5 / mBART)</td><td>能给出多种切分概率 · 适合 subword regularization</td></tr>
+</table>
+
+<h3>WordPiece 的微妙差异</h3>
+<pre><code># BPE 选 max(count(a, b))
+# WordPiece 选 max( count(a, b) / (count(a) * count(b)) )
+# 物理意义：让 (a, b) 同时出现的"惊讶程度"最大</code></pre>
+
+<p>实测差异不大。GPT 系列选 BPE 的原因是简单 + 跟 byte-level 配合好。BERT 用 WordPiece 是 Google 历史选择。</p>
+
+<h3>Unigram 的牛逼之处：可以采样切分</h3>
+<p>同一个词可能有多种合理切分 · Unigram 给每种切分一个概率 · 训练时<em>随机</em>采一种 · 起到正则化作用（类似 dropout）。研究显示对低资源语言提升明显。日常 LLM 不太用。</p>
+</section>
+
+<section id="cn">
+<h2>7 · 中文为什么吃亏 · token rate 实测</h2>
+
+<p>我们用同一句话比较各家 tokenizer：</p>
+
+<table>
+  <tr><th>原文</th><th colspan="6">"今天天气真好我们去公园玩吧" (12 字 · UTF-8 36 byte)</th></tr>
+  <tr><th>tokenizer</th><th>vocab</th><th>tokens</th><th>token / 字</th><th>token / byte</th><th>说明</th><th>结论</th></tr>
+  <tr><td>nano (本书 vocab=512)</td><td>512</td><td>~24</td><td>2.0</td><td>0.67</td><td>shakespeare 训的 · 中文没合并</td><td>纯灾难</td></tr>
+  <tr><td>GPT-2</td><td>50,257</td><td>~17</td><td>1.4</td><td>0.47</td><td>训练几乎没中文</td><td>差</td></tr>
+  <tr><td>GPT-3.5/4 (cl100k)</td><td>100,277</td><td>~12</td><td>1.0</td><td>0.33</td><td>有中文训练</td><td>OK</td></tr>
+  <tr><td>Llama-2</td><td>32,000</td><td>~24</td><td>2.0</td><td>0.67</td><td>SentencePiece · 几乎纯英文</td><td>极差</td></tr>
+  <tr><td>Llama-3</td><td>128,256</td><td>~13</td><td>1.1</td><td>0.36</td><td>vocab 翻 4 倍 + 加中文</td><td>追平</td></tr>
+  <tr><td><strong>Qwen2/3</strong></td><td>151,936</td><td>~7</td><td><strong>0.6</strong></td><td>0.19</td><td>中文优化 · BBPE + 大量中文 corpus</td><td>最佳</td></tr>
+  <tr><td>DeepSeek-V3</td><td>128,815</td><td>~9</td><td>0.75</td><td>0.25</td><td>中英平衡</td><td>很好</td></tr>
+</table>
+
+<div class="cb warn">
+  <p class="cb-h">商业影响</p>
+  <p>OpenAI 按 token 计费。<strong>同样内容 · 中文比英文贵 1.5-2 倍</strong>（cl100k 下）。
+  Llama-2 跑中文应用时 · 你的 4096 context 实际只能放 ~1700 中文字 · 训练时也学得慢。
+  Qwen / DeepSeek 之所以国内被广泛部署 · tokenizer 中文化是硬优势。</p>
+</div>
+
+<h3>怎么自己测</h3>
+<pre><code>from transformers import AutoTokenizer
+for model in ["gpt2", "Qwen/Qwen2.5-7B", "meta-llama/Llama-3.1-8B"]:
+    tok = AutoTokenizer.from_pretrained(model)
+    text = "今天天气真好"
+    print(model, len(tok.encode(text)))</code></pre>
+</section>
+
+<section id="special">
+<h2>8 · 特殊 token · BOS / EOS / chat template</h2>
+
+<p>裸 BPE 只有自然语言 token。但要做 chat 模型 · 你必须能<em>分隔</em>不同的对话角色 · 这就是特殊 token：</p>
+
+<table>
+  <tr><th>token</th><th>用途</th><th>常见名字</th></tr>
+  <tr><td>BOS (begin)</td><td>序列开始</td><td><code>&lt;s&gt;</code> · <code>&lt;|begin_of_text|&gt;</code></td></tr>
+  <tr><td>EOS (end)</td><td>序列结束 · 也是 generate 的停止信号</td><td><code>&lt;/s&gt;</code> · <code>&lt;|endoftext|&gt;</code></td></tr>
+  <tr><td>PAD</td><td>batch 内对齐到等长</td><td><code>&lt;|pad|&gt;</code> · 也常复用 EOS</td></tr>
+  <tr><td>UNK</td><td>未知 token (byte-level 用不到)</td><td><code>&lt;unk&gt;</code></td></tr>
+  <tr><td>Role tags</td><td>区分对话角色</td><td><code>&lt;|user|&gt;</code> · <code>&lt;|assistant|&gt;</code> · <code>&lt;|system|&gt;</code></td></tr>
+  <tr><td>FIM (fill-in-middle)</td><td>code 模型补全用</td><td><code>&lt;FIM_PREFIX&gt;</code> 等</td></tr>
+  <tr><td>Tool call</td><td>function calling</td><td><code>&lt;|tool_call|&gt;</code> · <code>&lt;|tool_result|&gt;</code></td></tr>
+</table>
+
+<h3>chat template · Llama-3 同款</h3>
+<pre><code>&lt;|begin_of_text|&gt;&lt;|start_header_id|&gt;system&lt;|end_header_id|&gt;
+You are a helpful assistant.&lt;|eot_id|&gt;
+&lt;|start_header_id|&gt;user&lt;|end_header_id|&gt;
+What's 2+2?&lt;|eot_id|&gt;
+&lt;|start_header_id|&gt;assistant&lt;|end_header_id|&gt;
+4&lt;|eot_id|&gt;</code></pre>
+
+<p>这一整段会过 tokenizer · 特殊 token 会被识别为<em>单一 id</em>（不会被 BPE 拆掉）· 然后扔给模型。</p>
+
+<div class="cb note">
+  <p class="cb-h">本项目 industrial 版的特殊 token</p>
+  <p>industrial/tokenizer/train_hf.py 注册了 5 个特殊 token：<code>&lt;|endoftext|&gt;</code> · <code>&lt;|pad|&gt;</code> · <code>&lt;|user|&gt;</code> · <code>&lt;|assistant|&gt;</code> · <code>&lt;|system|&gt;</code>。phase 4 (SFT) 时会真用上。</p>
+</div>
+</section>
+
+<section id="vocab">
+<h2>9 · vocab_size 怎么选 · 小模型 vs 大模型</h2>
+
+<p>这是个 tradeoff · 没有银弹。但有几条经验：</p>
+
+<table>
+  <tr><th>vocab</th><th>典型场景</th><th>权衡</th></tr>
+  <tr><td>~1k</td><td>本书 nano · 教学</td><td>序列超长 · 没法用</td></tr>
+  <tr><td>~10k-30k</td><td>BERT (30k) · Llama-2 (32k)</td><td>序列适中 · 中文不友好</td></tr>
+  <tr><td>50k-65k</td><td>GPT-2 (50k) · Mistral (32k 也算这档)</td><td>英文舒适</td></tr>
+  <tr><td><strong>100k-150k</strong></td><td>GPT-4 / Llama-3 / Qwen</td><td><strong>多语言 + 长上下文友好</strong></td></tr>
+  <tr><td>200k+</td><td>少见 · 多用于多语言模型</td><td>embedding 矩阵巨大</td></tr>
+</table>
+
+<h3>vocab 对参数的影响</h3>
+<div class="cb math">
+  <p>embedding + lm_head（不 tie）：<code>2 · vocab · n_embd</code></p>
+  <p>tie 之后：<code>vocab · n_embd</code></p>
+  <p>例：Llama-3 8B · vocab=128k · n_embd=4096 → emb 占 524M · 总参 8.0B 的 6.5%。<br>
+     但小模型 (350M · n_embd=1024) · vocab=128k → emb 占 131M · 占 37%！</p>
+</div>
+
+<p>规律：<strong>模型越小 · vocab 在总参里占比越大</strong>。所以小模型常砍 vocab（30k 左右） · 大模型才舍得开 100k+。</p>
+
+<h3>选 vocab 的实操步骤</h3>
+<ol>
+  <li>盘清你<em>必须支持的语言</em>。纯英文 30-50k 够。中英混 100k 起。</li>
+  <li>盘清你的 base model。继续训现成 base · 必须沿用它的 tokenizer · 不能换。</li>
+  <li>新训 base · 跑实验：在你的真实语料上分别试 30k / 50k / 100k · 看 token rate · 平均一个 token 多少 byte。</li>
+  <li>2 byte/token 以下都能接受。低于 1.5 说明 vocab 偏小。</li>
+</ol>
+</section>
+
+<section id="integrate">
+<h2>10 · Tokenizer 怎么接进 phase 1 nanoGPT</h2>
+
+<p>phase 1 nano/data.py 是 char-level · 现在我们想把它升级到 BPE-level 怎么办？三处改动 + 一处不变：</p>
+
+<h3>改 1 · CharDataset → BPEDataset</h3>
+<pre><code># 原：char-level
+ids = np.array([self.stoi[c] for c in self.text], dtype=np.int64)
+
+# 新：BPE
+from nano.bpe import BPE
+bpe = BPE.load("data/tokenizer/nano-bpe.json")
+ids = np.array(bpe.encode(self.text), dtype=np.int64)</code></pre>
+
+<h3>改 2 · vocab_size 来自 tokenizer</h3>
+<pre><code>model_cfg = GPTConfig(
+    vocab_size=bpe.vocab_size,   # 1024 而非 65
+    block_size=cfg.block_size,
+    ...
+)</code></pre>
+
+<h3>改 3 · sample.py 用 BPE encode/decode</h3>
+<pre><code>idx = torch.tensor([bpe.encode(args.prompt)], dtype=torch.long, device=device)
+out_ids = model.generate(idx, ...).tolist()[0]
+print(bpe.decode(out_ids))</code></pre>
+
+<h3>不变 · GPT 模型本身</h3>
+<p>nano/gpt.py 一行不用改。GPT 只关心 vocab_size 和 id 序列 · tokenizer 长什么样它根本不知道。这就是<em>抽象的力量</em>。</p>
+
+<div class="cb note">
+  <p class="cb-h">为什么我们 phase 2 没真的换上去</p>
+  <p>shakespeare 1MB 太小 · char-level 已经够用 · 换 BPE 收益小 · 反而把代码复杂度抬上去。
+  phase 3 (pretrain) 我们会真用 BPE · 那时候语料是 100MB+ · char-level 序列长得训练成本爆炸。</p>
+</div>
+</section>
+
+<section id="qs">
+<h2>30 题 · 自检</h2>
+
+<ol class="q">
+  <li>tokenizer 是不是模型的一部分？训练时它的参数变吗？</li>
+  <li>同一句话 GPT-4 中文比英文贵几倍？根本原因是什么？</li>
+  <li>char / word / subword / byte 各自的 OOV 风险是什么？</li>
+  <li>BPE 的训练算法用一句话描述。</li>
+  <li>BPE 的 base vocab 256 byte 哪里来？</li>
+  <li>encode 时为什么要按 "id 最小的 merge 优先"？</li>
+  <li>byte-level BPE 为什么不会 UNK？</li>
+  <li>UTF-8 编码下 · "中" 字几个 byte？emoji 几个 byte？</li>
+  <li>不做 pre-tokenization 直接 BPE 会出什么问题？</li>
+  <li>GPT-2 的 regex pre-tokenizer 大概切成几类单位？</li>
+  <li>为什么数字要切成 1-3 位？</li>
+  <li>BPE / WordPiece / Unigram 的核心差异是什么？</li>
+  <li>WordPiece 选合并的公式跟 BPE 有什么不同？</li>
+  <li>Llama-2 中文为什么差？Llama-3 怎么改善的？</li>
+  <li>Qwen 为什么 vocab 开到 15 万？</li>
+  <li>chat template 里的特殊 token 会被 BPE 拆吗？</li>
+  <li>BOS / EOS / PAD 各自什么作用？为什么 PAD 常复用 EOS？</li>
+  <li>vocab_size 对 embedding 矩阵的参数量影响多少？给公式。</li>
+  <li>weight tying 后 lm_head 还吃 vocab × n_embd 参数吗？</li>
+  <li>为什么小模型常砍 vocab · 大模型敢开大 vocab？</li>
+  <li>tokenizer 跟模型不匹配会发生什么（用 GPT-2 tokenizer + Llama 模型）？</li>
+  <li>byte-level BPE 的 "Ġ" 符号是什么意思？</li>
+  <li>SentencePiece 跟 BPE 是什么关系？</li>
+  <li>FIM 是什么 token · 谁会用？</li>
+  <li>tokenizer 的训练数据应该跟模型预训数据一致吗？</li>
+  <li>OOV 在 byte-level 时还存在吗？什么时候会出现 UNK？</li>
+  <li>为什么我们 nano 版 BPE 1MB 训了 30 多秒 · HF 0.2 秒？</li>
+  <li>tokenizer 文件存什么？至少要存哪两件事才能复现 encode？</li>
+  <li>把 char-level nanoGPT 升级到 BPE 要改几行代码？</li>
+  <li>tokenizer 不变 · 改语言（英→中）能直接微调吗？为什么不行 / 行？</li>
+</ol>
+
+<div class="cb note">
+  <p class="cb-h">参考：Q19</p>
+  <p>weight tying 后 · lm_head 跟 tok_emb 共享同一份内存 · 不再单独占 vocab × n_embd。但 tok_emb 自己还是要 vocab × n_embd · 你只省了 lm_head 那一份。</p>
+</div>
+</section>
+
+<section id="gloss">
+<h2>60 词术语表</h2>
+
+<dl class="gloss">
+<div class="row"><dt>tokenizer</dt> <dd>字符串 ↔ token id 序列的双向映射</dd></div>
+<div class="row"><dt>token</dt> <dd>tokenizer 的最小输出单位</dd></div>
+<div class="row"><dt>vocab</dt> <dd>tokenizer 认识的所有 token 集合</dd></div>
+<div class="row"><dt>vocab_size</dt> <dd>词表大小 · 决定 embedding 维度</dd></div>
+<div class="row"><dt>encode</dt> <dd>str → list[int]</dd></div>
+<div class="row"><dt>decode</dt> <dd>list[int] → str</dd></div>
+<div class="row"><dt>roundtrip</dt> <dd>encode 后 decode 必须等于原文</dd></div>
+<div class="row"><dt>OOV</dt> <dd>Out-of-Vocabulary · 没见过的 token</dd></div>
+<div class="row"><dt>UNK</dt> <dd>遇到 OOV 时退化的占位 token</dd></div>
+<div class="row"><dt>char-level</dt> <dd>以字符为单位</dd></div>
+<div class="row"><dt>word-level</dt> <dd>以词为单位</dd></div>
+<div class="row"><dt>subword</dt> <dd>词的更小片段 · 介于 char 和 word 之间</dd></div>
+<div class="row"><dt>byte-level</dt> <dd>以 UTF-8 byte 为基础单位</dd></div>
+<div class="row"><dt>UTF-8</dt> <dd>把 Unicode 字符编成 1-4 byte 的标准</dd></div>
+<div class="row"><dt>ASCII</dt> <dd>0-127 的英文字符 · 1 byte</dd></div>
+<div class="row"><dt>Unicode</dt> <dd>全人类字符的统一编号体系</dd></div>
+<div class="row"><dt>BPE</dt> <dd>Byte-Pair Encoding</dd></div>
+<div class="row"><dt>byte-level BPE / BBPE</dt> <dd>BPE + byte 起手 · 永不 UNK</dd></div>
+<div class="row"><dt>WordPiece</dt> <dd>BERT 用的 subword 算法</dd></div>
+<div class="row"><dt>Unigram</dt> <dd>SentencePiece 用的另一种 subword 算法</dd></div>
+<div class="row"><dt>SentencePiece</dt> <dd>Google 出的 tokenizer 库 · 不依赖空格</dd></div>
+<div class="row"><dt>tiktoken</dt> <dd>OpenAI 出的快速 BPE 库</dd></div>
+<div class="row"><dt>HuggingFace tokenizers</dt> <dd>Rust 写的多算法 tokenizer 库</dd></div>
+<div class="row"><dt>merges</dt> <dd>BPE 学到的 (a, b) → new_id 列表</dd></div>
+<div class="row"><dt>pair</dt> <dd>相邻两个 token</dd></div>
+<div class="row"><dt>pre-tokenizer</dt> <dd>BPE 之前先用 regex 把文本切成 word-ish 单元</dd></div>
+<div class="row"><dt>post-processor</dt> <dd>encode 之后加 BOS / EOS / pad 等</dd></div>
+<div class="row"><dt>decoder (tokenizer 里)</dt> <dd>把 token id 拼回字符串的策略</dd></div>
+<div class="row"><dt>BOS</dt> <dd>Begin Of Sequence · 序列开始</dd></div>
+<div class="row"><dt>EOS</dt> <dd>End Of Sequence · 也是 generate 的 stop signal</dd></div>
+<div class="row"><dt>PAD</dt> <dd>填充 token · 让 batch 内等长</dd></div>
+<div class="row"><dt>special token</dt> <dd>不会被 BPE 拆的保留 token</dd></div>
+<div class="row"><dt>added token</dt> <dd>训练后加进去的 token (chat tag 等)</dd></div>
+<div class="row"><dt>chat template</dt> <dd>把多轮对话拼成单串的格式</dd></div>
+<div class="row"><dt>FIM</dt> <dd>Fill-In-Middle · 代码补全用的中间填空</dd></div>
+<div class="row"><dt>tool token</dt> <dd>function calling 用的特殊标记</dd></div>
+<div class="row"><dt>token id</dt> <dd>token 在 vocab 里的整数索引</dd></div>
+<div class="row"><dt>token rate</dt> <dd>给定文本下 token 数 / 字数 (越低越省)</dd></div>
+<div class="row"><dt>compression ratio</dt> <dd>byte 数 / token 数 (越高越省)</dd></div>
+<div class="row"><dt>weight tying</dt> <dd>tok_emb 和 lm_head 共享权重</dd></div>
+<div class="row"><dt>embedding 矩阵</dt> <dd>vocab × n_embd 的 lookup 表</dd></div>
+<div class="row"><dt>lm_head</dt> <dd>n_embd × vocab 的输出投影</dd></div>
+<div class="row"><dt>UNK rate</dt> <dd>语料中 OOV token 占比</dd></div>
+<div class="row"><dt>cl100k</dt> <dd>GPT-3.5 / 4 用的 100k 词表名</dd></div>
+<div class="row"><dt>o200k</dt> <dd>GPT-4o 用的 200k 词表名</dd></div>
+<div class="row"><dt>p50k</dt> <dd>codex / GPT-3 用的 50k 词表名</dd></div>
+<div class="row"><dt>r50k / gpt2</dt> <dd>GPT-2 用的 50k 词表</dd></div>
+<div class="row"><dt>Ġ (G with dot)</dt> <dd>byte-level BPE 里空格的可见映射</dd></div>
+<div class="row"><dt>byte alphabet</dt> <dd>byte-level BPE 的 256 个 base token</dd></div>
+<div class="row"><dt>min_frequency</dt> <dd>训 BPE 时合并 pair 的最小频次门槛</dd></div>
+<div class="row"><dt>add_special_tokens</dt> <dd>encode 时是否自动加 BOS / EOS</dd></div>
+<div class="row"><dt>truncation</dt> <dd>序列超长时截断</dd></div>
+<div class="row"><dt>max_length</dt> <dd>encode 输出的最大 token 数</dd></div>
+<div class="row"><dt>padding side</dt> <dd>左 pad 还是右 pad · 影响 generate</dd></div>
+<div class="row"><dt>causal mask + pad</dt> <dd>pad 不该影响 attention · 用 attention_mask</dd></div>
+<div class="row"><dt>attention_mask</dt> <dd>0/1 矩阵 · 1=有效 token · 0=pad</dd></div>
+<div class="row"><dt>tokens / sec</dt> <dd>训练 / 推理吞吐</dd></div>
+<div class="row"><dt>cost per 1k tokens</dt> <dd>商业 API 计费单位</dd></div>
+<div class="row"><dt>tokenizer drift</dt> <dd>tokenizer 改了但模型没重训 · 输出错乱</dd></div>
+<div class="row"><dt>Hugging Face Hub</dt> <dd>tokenizer / model 的标准分发渠道</dd></div>
+<div class="row"><dt>BBPE</dt> <dd>Byte-level BPE 的常见缩写</dd></div>
+</dl>
+</section>
+
+<hr class="dim">
+
+<section style="border-bottom:0;">
+<h2>下一本</h2>
+<p><a href="./index.html">← 回 phase 总览</a> · 接下来 <strong>Book 03 · Pretrain</strong> · 把 nanoGPT 升级到 100M params · 在 FineWeb 子集上跑 · 体会 scaling law。</p>
+
+<div class="cb">
+  <p class="cb-h">commit 这一本对应的代码</p>
+  <p>
+    <code>nano/bpe.py</code> · <code>nano/tokenize.py</code> · <code>industrial/tokenizer/train_hf.py</code> · <code>tests/test_bpe.py</code><br>
+    跑通：<span class="kbd">make nano-tokenize</span> · <span class="kbd">make industrial-tokenize</span><br>
+    实测：nano 1MB 训 ~34s · HF 0.2s · 170× 差距 · 体会 "教学版 vs 工业版" 的天花板差距。
+  </p>
+</div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="container">
+    <p>taotao-llm · Book 02 · Phase 2 · MIT</p>
+    <p>
+      <a href="./index.html">总览</a> ·
+      <a href="./01-nanogpt.html">← Book 01</a> ·
+      <a href="https://github.com/doraemonlyz-jpg/taotao-llm">GitHub</a> ·
+      <a href="https://github.com/doraemonlyz-jpg/taotao-agent">姊妹项目 taotao-agent</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

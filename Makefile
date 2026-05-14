@@ -47,6 +47,10 @@ nano-dpo:  ## phase 6 · minimal DPO 演示
 	uv run python -m nano.dpo
 
 # ============== industrial (工业版) ======================================
+.PHONY: industrial-tokenize
+industrial-tokenize:  ## phase 2 · HuggingFace tokenizers · GPT-2 同款配方
+	uv run python -m industrial.tokenizer.train_hf
+
 .PHONY: industrial-pretrain
 industrial-pretrain:  ## phase 3 · 跑工业级 pretrain
 	uv run python -m industrial.pretrain.run
